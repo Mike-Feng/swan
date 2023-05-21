@@ -58,13 +58,13 @@
     <item row="5" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QGroupBox" name="groupBox_3">
+       <widget class="QGroupBox" name="gboxScan">
         <property name="title">
          <string>扫描方式</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
-          <widget class="QRadioButton" name="radRangePreview">
+          <widget class="QRadioButton" name="radScanByRect">
            <property name="text">
             <string>按范围扫描</string>
            </property>
@@ -94,24 +94,33 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QSpinBox" name="spinBox">
+          <widget class="QSpinBox" name="txtRectStart">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="readOnly">
             <bool>true</bool>
            </property>
+           <property name="maximum">
+            <number>1920</number>
+           </property>
           </widget>
          </item>
          <item row="0" column="4">
-          <widget class="QSpinBox" name="spinBox_7">
+          <widget class="QSpinBox" name="txtRectStep">
+           <property name="minimum">
+            <number>10</number>
+           </property>
            <property name="maximum">
-            <number>100</number>
+            <number>1000</number>
+           </property>
+           <property name="singleStep">
+            <number>10</number>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QSpinBox" name="spinBox_8">
+          <widget class="QSpinBox" name="txtDegStart">
            <property name="minimum">
             <number>-30</number>
            </property>
@@ -131,7 +140,7 @@
           </widget>
          </item>
          <item row="1" column="2">
-          <widget class="QSpinBox" name="spinBox_9">
+          <widget class="QSpinBox" name="txtDegEnd">
            <property name="minimum">
             <number>-30</number>
            </property>
@@ -141,17 +150,24 @@
           </widget>
          </item>
          <item row="0" column="2">
-          <widget class="QSpinBox" name="spinBox_2">
+          <widget class="QSpinBox" name="txtRectEnd">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="readOnly">
             <bool>true</bool>
            </property>
+           <property name="maximum">
+            <number>1920</number>
+           </property>
           </widget>
          </item>
          <item row="1" column="4">
-          <widget class="QDoubleSpinBox" name="doubleSpinBox_3"/>
+          <widget class="QDoubleSpinBox" name="txtDegStep">
+           <property name="minimum">
+            <double>0.100000000000000</double>
+           </property>
+          </widget>
          </item>
          <item row="2" column="0">
           <widget class="QRadioButton" name="radScanByPixel">
@@ -161,14 +177,14 @@
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QSpinBox" name="spinBox_4">
+          <widget class="QSpinBox" name="txtPixStart">
            <property name="maximum">
             <number>1920</number>
            </property>
           </widget>
          </item>
          <item row="2" column="2">
-          <widget class="QSpinBox" name="spinBox_5">
+          <widget class="QSpinBox" name="txtPixEnd">
            <property name="maximum">
             <number>1920</number>
            </property>
@@ -185,9 +201,15 @@
           </widget>
          </item>
          <item row="2" column="4">
-          <widget class="QSpinBox" name="spinBox_6">
+          <widget class="QSpinBox" name="txtPixStep">
+           <property name="minimum">
+            <number>10</number>
+           </property>
            <property name="maximum">
-            <number>100</number>
+            <number>1000</number>
+           </property>
+           <property name="singleStep">
+            <number>10</number>
            </property>
           </widget>
          </item>
@@ -195,7 +217,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_5">
+       <widget class="QGroupBox" name="gboxline">
         <property name="title">
          <string>辅助线设定</string>
         </property>
@@ -293,7 +315,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_4">
+       <widget class="QGroupBox" name="gboxOp">
         <property name="title">
          <string>云台操作</string>
         </property>
@@ -308,14 +330,14 @@
          <item row="1" column="2">
           <widget class="QPushButton" name="btnTurnRight">
            <property name="text">
-            <string>右转设定原点↷</string>
+            <string>向右设定原点↷</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
           <widget class="QPushButton" name="btnTurnLeft">
            <property name="text">
-            <string>↶左转设定原点</string>
+            <string>↶向左设定原点</string>
            </property>
           </widget>
          </item>
@@ -328,15 +350,18 @@
          </item>
          <item row="0" column="2">
           <widget class="QPushButton" name="btnPause">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
-            <string>暂停</string>
+            <string>暂停扫描</string>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
           <widget class="QPushButton" name="btnStartStop">
            <property name="text">
-            <string>开始</string>
+            <string>开始扫描</string>
            </property>
           </widget>
          </item>
@@ -344,15 +369,29 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_6">
+       <widget class="QGroupBox" name="gboxSensor">
         <property name="title">
          <string>相机</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_6">
+         <item row="2" column="1">
+          <widget class="QPushButton" name="btnSensorVideo">
+           <property name="text">
+            <string>工业相机拍摄</string>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="0">
           <widget class="QLabel" name="label_12">
            <property name="text">
             <string>曝光时间（毫秒）</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="btnSensorPreview">
+           <property name="text">
+            <string>工业相机拍照</string>
            </property>
           </widget>
          </item>
@@ -370,16 +409,16 @@
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QPushButton" name="btnSensorPreview">
+          <widget class="QCheckBox" name="chkMirrorH">
            <property name="text">
-            <string>工业相机拍照</string>
+            <string>水平翻转</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QPushButton" name="btnSensorPreview_2">
+          <widget class="QCheckBox" name="chkMirrorV">
            <property name="text">
-            <string>工业相机拍摄</string>
+            <string>垂直翻转</string>
            </property>
           </widget>
          </item>

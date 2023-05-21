@@ -53,6 +53,7 @@ public:
     void setPreviewResolution(const QSize &);
 signals:
     void newImage(const QImage &preview);
+    void status(int);
 
 public slots:
     void init();

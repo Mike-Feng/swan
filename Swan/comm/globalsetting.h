@@ -18,6 +18,13 @@
 
 namespace Cg { namespace Swan { namespace Comm {
 
+enum SWanScanMode
+{
+    SM_RECT,
+    SM_DEG,
+    SM_PIX
+};
+
 class SwanSetting : public QObject
 {
     Q_OBJECT
@@ -25,16 +32,45 @@ public:
     explicit SwanSetting(QObject* parent = nullptr);
     ~SwanSetting();
 public:
-    // General settings [group]
-
-    // [r] indicator to camera size
-    QSize imageSize();
+    /****** General group begin******/
+    QString picUSBPath(); void setPicUSBPath(QString);
+#define SWAN_PICUSBPATH (SwanINI.picUSBPath())
+    QString picJCPath(); void setPicJCPath(QString);
+#define SWAN_PICJCPATH (SwanINI.picJCPath())
+    QRect scanRect(); void setScanRect(QRect);
+#define SWAN_SCANRECT (SwanINI.scanRect())
+    int rectStep(); void setRectStep(int);
+#define SWAN_RECTSTEP (SwanINI.rectStep())
+    int startPixel(); void setStartPixel(int);
+#define SWAN_STARTPIXEL (SwanINI.startPixel())
+    int endPixel(); void setEndPixel(int);
+#define SWAN_ENDPIXEL (SwanINI.endPixel())
+    int pixelStep(); void setPixelStep(int);
+#define SWAN_PIXELSTEP (SwanINI.pixelStep())
+    int startAngle(); void setStartAngle(int);
+#define SWAN_STARTANGLE (SwanINI.startAngle())
+    int endAngle(); void setEndAngle(int);
+#define SWAN_ENDANGLE (SwanINI.endAngle())
+    double angleStep(); void setAngleStep(double);
+#define SWAN_ANGLESTEP (SwanINI.angleStep())
+    QSize imageSize(); void setImageSize(QSize);
 #define SWAN_IMAGESIZE (SwanINI.imageSize())
+    SWanScanMode scanMode(); void setScanMode(SWanScanMode);
+#define SWAN_SCANMODE (SwanINI.scanMode())
+    /****** General group end******/
 
+    /****** Motor group begin******/
+    int speed(); void setSpeed(int);
+#define SWAN_SPEED (SwanINI.speed())
+    int lastPosition(); void setLastPosition(int);
+#define SWAN_LASTPOSITION (SwanINI.lastPosition())
+    int readyPosition(); void setReadyPosition(int);
+#define SWAN_READYPOSITION (SwanINI.readyPosition())
+    /****** Motor group end******/
 
     /****** Camera group begin******/
-    int viewAngle(); void setViewAngle(int);
-#define SWAN_VIEW_ANGLE (SwanINI.viewAngle())
+    int viewRange(); void setViewRange(int);
+#define SWAN_VIEWRANGE (SwanINI.viewRange())
     int yline1(); void setYline1(int);
 #define SWAN_YLINE1 (SwanINI.yline1())
     int yline2(); void setYline2(int);
@@ -48,6 +84,15 @@ public:
     QColor mouseColor(); void setMouseColor(QColor);
 #define SWAN_MOUSECOLOR (SwanINI.mouseColor())
     /****** Camera group end******/
+
+    /****** JingCui group begin******/
+    int exposure(); void setExposure(int);
+#define SWAN_EXPOSURE (SwanINI.exposure())
+    bool mirrorv(); void setMirrorv(bool);
+#define SWAN_MIRRORV (SwanINI.mirrorv())
+    bool mirrorh(); void setMirrorh(bool);
+#define SWAN_MIRRORH (SwanINI.mirrorh())
+    /****** JingCui group end******/
 
 private:
 

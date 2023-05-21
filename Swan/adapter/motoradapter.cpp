@@ -42,6 +42,7 @@ void MotorAdapter::init()
     statusChecker->setInterval(100);
     connect(statusChecker, &QTimer::timeout, this, &MotorAdapter::ReportStatus);
 
+    emit motorStateChanged(_status);
 }
 
 void MotorAdapter::connectDevice()
@@ -82,7 +83,29 @@ bool MotorAdapter::initMotorDriver()
         logdebug <<  "slave id is 01.";
     }
 
+    setSpeed(SWAN_SPEED);
+
     return true;
+}
+
+void MotorAdapter::setSpeed(qint32 speed)
+{
+    // set both reset speed and run speed
+    QVector<quint16> speedv;
+    speedv.append(((speed >> 16) & 0xffff));
+    speedv.append(speed & 0xffff);
+
+    bool d = write(0x24, speedv);
+    d &= write(0x26, speedv);
+    if(d)
+    {
+        logdebug << "set motor speed to " << speed;
+    }
+    else
+    {
+        logerror << "set motor speed failed.";
+    }
+
 }
 
 void MotorAdapter::ReportStatus()
@@ -148,7 +171,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
         // the max distance is 0xffffff
         data = data & 0xffffff;
         // setup condition
-        conditions.position = data;
+        conditions.position = param.data32;
         conditions.isCheckPosition = true;
 
         high |= (data >> 16) & 0xff;
@@ -176,7 +199,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
         }
         break;
     }
-    case MotorAction::MA_RunOnSpeed:
+    case MotorAction::MA_MoveZero:
     case MotorAction::MA_FindBarrier:
     {
         qint16 data = 0;
@@ -207,7 +230,21 @@ void MotorAdapter::execute(const MotorActionParam & param)
     }
     case MotorAction::MA_StopRun:
     {
-        bool d = write(0x2d, 0x00);
+        quint16 p = 0; // 0 indicates stop condition is flag level is high
+        if(param.Direction == MD_Clock)
+        {
+            p |= (1 << 1); // enable right flag
+            p |= (1 << 4); // clock
+
+            logdebug << "stop turn clock";
+        }
+        else
+        {
+            p |= (1 << 0); // enable left flag
+            logdebug << "stop turn counterclock";
+        }
+
+        bool d = write(0x2a, p);
         if(d)
         {
             logdebug << "write stop success.";
@@ -224,17 +261,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
     }
     case MotorAction::MA_SetSpeed:
     {
-        // set both reset speed and run speed       
-        bool d = write(0x24, 0x0000c800);
-        d &= write(0x26, 0x0000c800);
-        if(d)
-        {
-            logdebug << "write stop success.";
-        }
-        else
-        {
-            logerror << "write stop failed.";
-        }
+        setSpeed(param.data32);
         break;
     }
     case MotorAction::MA_ReadStatus:
@@ -266,14 +293,17 @@ void MotorAdapter::readStatus()
         QByteArray position = read(0x2b, 2);
         if(position.length() == 4)
         {
+            int p0 = (position[0] & (1 << 7));
             int p1 = (position[1] << 16) & 0xff0000;
             int p2 = (position[2] << 8 ) & 0xff00;
             int p3 = (position[3] << 0 ) & 0xff;
 
             // the max distance is 0xffffff
             _status.position = (p1 | p2 | p3);
-            //_status.position += (p2 << 8);
-            //_status.position += ;
+
+            // negative direction
+            if(p0 > 0)
+                _status.position *= -1;
         }
     }
     else

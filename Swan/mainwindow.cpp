@@ -15,6 +15,7 @@
 #include <QBrush>
 #include <QColorDialog>
 #include <QPalette>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -98,21 +99,27 @@ MainWindow::MainWindow(QWidget *parent)
     tcontroller = new QThread();
     controller->moveToThread(tcontroller);
     connect(tcontroller, &QThread::started, controller, &FlowController::init);
-    tcontroller->start();
-
     connect(controller, &FlowController::newImage, this, &MainWindow::handleNewImage);
+    connect(controller, &FlowController::adapterStatus, this, &MainWindow::handleAdapterStatus);
+    connect(controller, &FlowController::actionFinished, this, &MainWindow::handleActionFinished);
     connect(this, &MainWindow::doAction, controller, &FlowController::execute);
 
+    tcontroller->start();
     initUI();
 
     qDebug() << ("application started.");
+    QSize s(1920,1080);
+    SwanINI.setImageSize(s);
+
 }
 
 MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
-    qDebug() << "quit application";
+    qDebug() << "quit application";    
+    disconnect(controller, &FlowController::newImage, this, &MainWindow::handleNewImage);
+    sleep(50);
     controller->Quit();
 }
 void MainWindow::showEvent(QShowEvent *event)
@@ -144,17 +151,43 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::initUI()
 {
-    int sm = controller->scanMode();
+    SWanScanMode sm = SWAN_SCANMODE;
     switch (sm) {
-    case 1:
-        ui->radScanByDeg->setChecked(true);
+    case SM_RECT:
+        ui->radScanByRect->setChecked(true);
+        controller->setScanMode(SM_RECT);
+        logdebug << "scan mode: SM_RECT";
         break;
-    case 2:
+    case SM_DEG:
+        ui->radScanByDeg->setChecked(true);
+        controller->setScanMode(SM_DEG);
+        logdebug << "scan mode: SM_DEG";
+        break;
+    case SM_PIX:
         ui->radScanByPixel->setChecked(true);
+        controller->setScanMode(SM_PIX);
+        logdebug << "scan mode: SM_PIX";
         break;
     }
 
+    ui->txtRectStart->setValue(SWAN_SCANRECT.x());
+    ui->txtRectEnd->setValue(SWAN_SCANRECT.y());
+    ui->txtRectStep->setValue(SWAN_RECTSTEP);
+    ui->txtDegStart->setValue(SWAN_STARTANGLE);
+    ui->txtDegEnd->setValue(SWAN_ENDANGLE);
+    ui->txtDegStep->setValue(SWAN_ANGLESTEP);
+    ui->txtPixStart->setValue(SWAN_STARTPIXEL);
+    ui->txtPixEnd->setValue(SWAN_ENDPIXEL);
+    ui->txtPixStep->setValue(SWAN_PIXELSTEP);
+
+    ui->txtBasey1->setValue(SWAN_YLINE1);
+    ui->txtBasey2->setValue(SWAN_YLINE2);
+    ui->txtBasex->setValue(SWAN_XCENTER);
     setButtonColor(SWAN_LINECOLOR);
+
+    ui->txtExpo->setValue(SWAN_EXPOSURE);
+    ui->chkMirrorH->setChecked(SWAN_MIRRORH);
+    ui->chkMirrorV->setChecked(SWAN_MIRRORV);
 }
 
 QPoint MainWindow::restoreCoor(const QPoint& qp)
@@ -166,6 +199,27 @@ QPoint MainWindow::restoreCoor(const QPointF& qpf)
 {
     QPoint p(qpf.x() * scaleRateX, qpf.y() * scaleRateY );
     return p;
+}
+
+void MainWindow::enableButton(QList<QPushButton *> & buttons)
+{
+    ui->btnStartStop->setEnabled(false);
+    ui->btnPause->setEnabled(false);
+    ui->btnTurnLeft->setEnabled(false);
+    ui->btnTurnRight->setEnabled(false);
+    ui->btnHome->setEnabled(false);
+    ui->btnCheckBarrier->setEnabled(false);
+
+    foreach(QPushButton * b, buttons)
+    {
+        b->setEnabled(true);
+    }
+}
+void MainWindow::enableButton(QPushButton * btn)
+{
+    QList<QPushButton *> bs;
+    bs.append(btn);
+    enableButton(bs);
 }
 
 void MainWindow::handleNewImage(const QImage & img, ImageSource imgs)
@@ -203,8 +257,48 @@ void MainWindow::handleNewImage(const QImage & img, ImageSource imgs)
     }
 }
 
+void MainWindow::handleAdapterStatus(int v)
+{
+    switch(v)
+    {
+    case 1:
+        QMessageBox::critical(this, "错误", "USB摄像头初始化失败。");
+        ui->statusbar->showMessage("USB摄像头初始化失败。");
+        ui->gboxScan->setEnabled(false);
+        ui->gboxline->setEnabled(false);
+        break;
+    case 2:
+        QMessageBox::critical(this, "错误", "工业相机初始化失败。");
+        ui->statusbar->showMessage("工业相机初始化失败。");
+        ui->gboxSensor->setEnabled(false);
+        break;
+    case 3:
+        QMessageBox::critical(this, "错误", "旋转平台初始化失败。");
+        ui->statusbar->showMessage("旋转平台初始化失败。");
+        break;
+    }
+
+    ui->gboxOp->setEnabled(false);
+}
+
+void MainWindow::handleActionFinished()
+{
+    logdebug << "action finished.";
+    QList<QPushButton*> btns;
+    btns.append(ui->btnStartStop);
+    btns.append(ui->btnTurnLeft);
+    btns.append(ui->btnTurnRight);
+    btns.append(ui->btnHome);
+    btns.append(ui->btnCheckBarrier);
+    enableButton(btns);
+}
+
 void MainWindow::on_btnCheckBarrier_clicked()
 {
+    logdebug << "begin Check Barrier.";
+    QList<QPushButton*> btns;
+    enableButton(btns);
+
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_FindBarrier;
@@ -223,11 +317,50 @@ void MainWindow::on_btnStartStop_clicked()
     {
         text = ("停止");
         param.flowParam.fAction = FA_Run;
+
+        switch (mode) {
+        case SM_RECT:
+            param.flowParam.start = ui->txtRectStart->value();
+            param.flowParam.end = ui->txtRectEnd->value();
+            param.flowParam.step = ui->txtRectStep->value();
+            break;
+        case SM_DEG:
+            param.flowParam.start = ui->txtDegStart->value();
+            param.flowParam.end = ui->txtDegEnd->value();
+            param.flowParam.step = ui->txtDegStep->value();
+            break;
+        case SM_PIX:
+            param.flowParam.start = ui->txtPixStart->value();
+            param.flowParam.end = ui->txtPixEnd->value();
+            param.flowParam.step = ui->txtPixStep->value();
+            break;
+        }
+
+        if(param.flowParam.start > param.flowParam.end)
+        {
+            param.flowParam.start += param.flowParam.end;
+            param.flowParam.end = param.flowParam.start - param.flowParam.end;
+            param.flowParam.start = param.flowParam.start - param.flowParam.end;
+        }
+        param.flowParam.mode = mode;
+
+        QList<QPushButton*> btns;
+        btns.append(ui->btnStartStop);
+        btns.append(ui->btnPause);
+        enableButton(btns);
     }
     else
     {
         text = ("开始");
         param.flowParam.fAction = FA_Stop;
+
+        QList<QPushButton*> btns;
+        btns.append(ui->btnStartStop);
+        btns.append(ui->btnTurnLeft);
+        btns.append(ui->btnTurnRight);
+        btns.append(ui->btnHome);
+        btns.append(ui->btnCheckBarrier);
+        enableButton(btns);
     }
 
     ui->btnStartStop->setText(text);
@@ -261,39 +394,49 @@ void MainWindow::on_btnHome_clicked()
     ui->btnStartStop->setText(("开始"));
     ui->btnPause->setText(("暂停"));
 
+    QList<QPushButton*> btn;
+    enableButton(btn);
+
     //1. stop the previous task
     ActionParam param;
     param.target = FlowTarget;
-    param.flowParam.fAction = FA_Stop;
-
+    param.flowParam.fAction = FA_GotoReady;
     emit doAction(param);
+}
 
-    //2. make the motor to go home
-    param.target = MotorTarget;
-    param.motorParam.MAction = MA_GotoReady;
-
-    emit doAction(param);
+void MainWindow::on_radScanByRect_toggled(bool checked)
+{
+    //scanmode: 1-> scan by degree; 2->scan by pixels
+    if(checked)
+    {
+        _shadowArea->show();
+        mode = SM_RECT;
+    }
+    else
+    {
+        _shadowArea->hide();
+    }
 }
 
 void MainWindow::on_radScanByDeg_toggled(bool checked)
 {
     //scanmode: 1-> scan by degree; 2->scan by pixels
     if(checked)
-        controller->setScanMode(1);
+        mode = SM_DEG;
 }
 
 void MainWindow::on_radScanByPixel_toggled(bool checked)
 {
     //scanmode: 1-> scan by degree; 2->scan by pixels
     if(checked)
-        controller->setScanMode(2);
+        mode = SM_PIX;
 }
 
 void MainWindow::on_btnTurnLeft_pressed()
 {
     ActionParam param;
     param.target = MotorTarget;
-    param.motorParam.MAction = MA_RunOnSpeed;
+    param.motorParam.MAction = MA_MoveZero;
     param.motorParam.Direction = MD_CounterClock;
 
     emit doAction(param);
@@ -304,6 +447,7 @@ void MainWindow::on_btnTurnLeft_released()
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
+    param.motorParam.Direction = MD_CounterClock;
 
     emit doAction(param);
 }
@@ -312,7 +456,7 @@ void MainWindow::on_btnTurnRight_pressed()
 {
     ActionParam param;
     param.target = MotorTarget;
-    param.motorParam.MAction = MA_RunOnSpeed;
+    param.motorParam.MAction = MA_MoveZero;
     param.motorParam.Direction = MD_Clock;
 
     emit doAction(param);
@@ -323,6 +467,7 @@ void MainWindow::on_btnTurnRight_released()
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
+    param.motorParam.Direction = MD_Clock;
 
     emit doAction(param);
 }
@@ -378,7 +523,9 @@ void MainWindow::mouseReleased(QPoint point)
         if(_shadowArea->isVisible())
         {
             isChangeRect = false;
-            controller->setScanRange(scanArea);
+            ui->txtRectStart->setValue(scanArea.x());
+            ui->txtRectEnd->setValue(scanArea.x() + scanArea.width());
+            SwanINI.setScanRect(scanArea);
         }
     }
 }
@@ -411,14 +558,6 @@ void MainWindow::leaved()
     updateStatusLabel();
 }
 
-void MainWindow::on_btnRangePreview_clicked()
-{
-    if(_shadowArea->isVisible())
-        _shadowArea->hide();
-    else
-        _shadowArea->show();
-}
-
 void MainWindow::setShadowArea()
 {
     QRegion outRe(_gvCamera->rect());
@@ -428,7 +567,7 @@ void MainWindow::setShadowArea()
     painterPath.addRegion(outRe.subtracted(innRe));
     _shadowArea->setPath(painterPath);
     scanArea = QRect(r.x() * scaleRateX, r.y() * scaleRateY,
-                r.width() * scaleRateX, r.height() * scaleRateY);
+                     r.width() * scaleRateX, r.height() * scaleRateY);
 }
 
 void MainWindow::updateStatusLabel()
@@ -452,8 +591,26 @@ void MainWindow::on_btnSensorPreview_clicked()
 {
     ActionParam param;
     param.target = SensorTarget;
+    param.jcParam.Action = JC_TakeSnap;
+
+    emit doAction(param);
+}
+
+void MainWindow::on_btnSensorVideo_clicked()
+{
+    ActionParam param;
+    param.target = SensorTarget;
     param.jcParam.Action = JC_Preview;
-    param.jcParam.IntParamValue = ui->txtExpo->value();
+    if(ui->btnSensorVideo->text() == "工业相机拍摄")
+    {
+        param.jcParam.IntParamValue = true;
+        ui->btnSensorVideo->setText("暂停拍摄");
+    }
+    else
+    {
+        param.jcParam.IntParamValue = false;
+        ui->btnSensorVideo->setText("工业相机拍摄");
+    }
 
     emit doAction(param);
 }
@@ -498,7 +655,90 @@ void MainWindow::on_txtBasey2_valueChanged(int y)
 void MainWindow::on_txtBasex_valueChanged(int x)
 {
     x = x > _sceneCamera->width() ? _sceneCamera->width() : x;
-
     SwanINI.setXCenter(x * scaleRateX);
     _xbase->setLine(x,0,x,_sceneCamera->height());
+}
+
+void MainWindow::on_txtDegStart_valueChanged(int deg)
+{
+    SwanINI.setStartAngle(deg);
+}
+
+void MainWindow::on_txtDegEnd_valueChanged(int deg)
+{
+    SwanINI.setEndAngle(deg);
+}
+
+void MainWindow::on_txtDegStep_valueChanged(double d)
+{
+    SwanINI.setAngleStep(d);
+}
+
+void MainWindow::on_txtRectStep_valueChanged(int r)
+{
+    SwanINI.setRectStep(r);
+}
+
+void MainWindow::on_txtPixStep_valueChanged(int p)
+{
+    SwanINI.setPixelStep(p);
+}
+
+void MainWindow::on_txtPixEnd_valueChanged(int p)
+{
+    SwanINI.setEndPixel(p);
+}
+
+void MainWindow::on_txtPixStart_valueChanged(int p)
+{
+    SwanINI.setStartPixel(p);
+}
+
+void MainWindow::on_txtExpo_valueChanged(int expo)
+{
+    ActionParam param;
+    param.target = SensorTarget;
+    param.jcParam.Action = JC_SetExposure;
+    param.jcParam.IntParamValue = ui->txtExpo->value();
+
+    emit doAction(param);
+
+    SwanINI.setExposure(expo);
+}
+
+
+void MainWindow::on_chkMirrorH_clicked(bool checked)
+{
+    logdebug << "set MirrorH " << checked;
+    ActionParam param;
+    param.target = SensorTarget;
+    param.jcParam.Action = JC_SetMirror;
+    int mirror = 0;
+    if(checked)
+        mirror = 2;
+    if(ui->chkMirrorV->isChecked())
+    {
+        mirror +=1;
+    }
+    param.jcParam.IntParamValue = mirror;
+
+    emit doAction(param);
+}
+
+void MainWindow::on_chkMirrorV_clicked(bool checked)
+{
+    logdebug << "set MirrorV " << checked;
+    ActionParam param;
+    param.target = SensorTarget;
+    param.jcParam.Action = JC_SetMirror;
+    int mirror = 0;
+    if(ui->chkMirrorH->isChecked())
+        mirror = 2;
+    if(checked)
+    {
+        mirror +=1;
+    }
+    param.jcParam.IntParamValue = mirror;
+
+    emit doAction(param);
 }

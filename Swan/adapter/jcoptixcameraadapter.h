@@ -34,6 +34,7 @@ enum JCCameraAction
     JC_Default,
     JC_TriggerOnce,
     JC_SetExposure,
+    JC_SetMirror,
     JC_TakeSnap,
     JC_Preview
 };
@@ -54,8 +55,10 @@ public:
     bool setTriggerMode(int mode);
     bool setExposure(int time);
     void Quit();
+
 signals:
     void newImage(const QImage &preview);
+    void status(int);
 
 public slots:
     void init();

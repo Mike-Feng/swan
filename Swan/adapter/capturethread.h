@@ -17,20 +17,16 @@ public:
     void pause();
     void stop();
 
-    bool quit;
-
+public slots:
 
 signals:
     void captured(QImage & img);
+
 private:
     bool pause_status;
-
-
-
+    bool quit;
     QVector<QRgb> grayColourTable;
     QVector<QRgb> ColourTable;
-
-public slots:
 
 };
 } } }

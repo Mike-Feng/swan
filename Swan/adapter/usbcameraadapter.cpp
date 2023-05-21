@@ -36,7 +36,8 @@ void USBCameraAdapter::init()
             _capture->setCaptureDestination(QCameraImageCapture::CaptureToBuffer);
             _camera->start();
             QCameraViewfinderSettings customSetting;
-            customSetting.setResolution(1920,1080);
+            QSize reso = SWAN_IMAGESIZE;
+            customSetting.setResolution(reso.width(),reso.height());
             _camera->setViewfinderSettings(customSetting);
             QtConcurrent::run([=]() {
                 while(_isStarted)
@@ -59,7 +60,11 @@ void USBCameraAdapter::init()
     if(_camera == nullptr)
     {
         qCritical() << ("PC Camera not found");
+        emit status(-1);
+        return;
     }
+
+    emit status(0);
 }
 
 

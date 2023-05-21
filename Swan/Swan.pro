@@ -56,7 +56,13 @@ DISTFILES += \
     log.ini \
     swan.ini
 
-copy_ini.commands = $${QMAKE_COPY_FILE} $$shell_path($$PWD/*.ini) $$shell_path($$OUT_PWD)
+CONFIG(release, debug|release) {
+    DEST_DIR = release
+} else {
+    DEST_DIR = debug
+}
+
+copy_ini.commands = $${QMAKE_COPY_FILE} $$shell_path($$PWD/*.ini) $$shell_path($$OUT_PWD/$$DEST_DIR)
 
 first.depends += $(first) copy_ini
 QMAKE_EXTRA_TARGETS += first copy_ini

@@ -35,6 +35,7 @@ void JCOptixCameraAdapter::init()
 {
     if(initSDK()==-1){
         logerror << "init JC camera SDK failed.";
+        emit status(-1);
         return;
     }
 
@@ -44,10 +45,14 @@ void JCOptixCameraAdapter::init()
             this, &JCOptixCameraAdapter::Image_process, Qt::BlockingQueuedConnection);
 
     if(initParam() == false)
+    {
+        emit status(-1);
         return;
+    }
 
     m_thread->start();
     //m_thread->pause();
+    emit status(0);
 }
 
 int JCOptixCameraAdapter::initSDK()
@@ -102,10 +107,12 @@ int JCOptixCameraAdapter::initSDK()
 
 bool JCOptixCameraAdapter::initParam()
 {
-    bool ret = setResolution(1920, 1080);
+    QSize reso = SWAN_IMAGESIZE;
+    bool ret = setResolution(reso.width(), reso.height());
     ret &= setTriggerMode(1);
-    ret &= setExposure(2000);
-
+    ret &= setExposure(SWAN_EXPOSURE);
+    CameraSetMirror(g_hCamera, MIRROR_DIRECTION_HORIZONTAL, SWAN_MIRRORH);
+    CameraSetMirror(g_hCamera, MIRROR_DIRECTION_VERTICAL, SWAN_MIRRORV);
     g_SaveImage_type=3;
 
     return ret;
@@ -163,23 +170,23 @@ bool JCOptixCameraAdapter::setResolution(int w, int h)
 bool JCOptixCameraAdapter::setTriggerMode(int mode)
 {
     //0表示连续采集模式；1表示软件触发模式；2表示硬件触发模式。
-   CameraSdkStatus ret = CameraSetTriggerMode(g_hCamera, mode);
+    CameraSdkStatus ret = CameraSetTriggerMode(g_hCamera, mode);
 
-   QString modestr;
-   if(mode == 0) modestr = "stream trigger";
-   else if(mode == 1) modestr = "soft trigger";
-   else if(mode == 2) modestr = "hardware trigger";
+    QString modestr;
+    if(mode == 0) modestr = "stream trigger";
+    else if(mode == 1) modestr = "soft trigger";
+    else if(mode == 2) modestr = "hardware trigger";
 
-   if(ret == CAMERA_STATUS_SUCCESS)
-   {
-       logdebug << "set " << modestr << " success. ";
-       return true;
-   }
-   else
-   {
-       logdebug << "set " << modestr << " failed. ";
-       return false;
-   }
+    if(ret == CAMERA_STATUS_SUCCESS)
+    {
+        logdebug << "set " << modestr << " success. ";
+        return true;
+    }
+    else
+    {
+        logdebug << "set " << modestr << " failed. ";
+        return false;
+    }
 }
 
 bool JCOptixCameraAdapter::setExposure(int time)
@@ -224,15 +231,38 @@ void JCOptixCameraAdapter::execute(const JCCameraActionParam& param)
         setExposure(param.IntParamValue);
         break;
     }
+    case JCCameraAction::JC_SetMirror:
+    {
+        if((param.IntParamValue & 2) == 2)
+            CameraSetMirror(g_hCamera, MIRROR_DIRECTION_HORIZONTAL, true);
+        else
+            CameraSetMirror(g_hCamera, MIRROR_DIRECTION_HORIZONTAL, false);
+
+        if((param.IntParamValue & 1) == 1)
+            CameraSetMirror(g_hCamera, MIRROR_DIRECTION_VERTICAL, true);
+        else
+            CameraSetMirror(g_hCamera, MIRROR_DIRECTION_VERTICAL, false);
+
+        break;
+    }
     case JCCameraAction::JC_TriggerOnce:
     {
         CameraSoftTrigger(g_hCamera);
         break;
     }
+    case JCCameraAction::JC_TakeSnap:
+    {
+        setTriggerMode(1);
+        Sleep(100);
+        CameraSoftTrigger(g_hCamera);
+        break;
+    }
     case JCCameraAction::JC_Preview:
     {
-        setTriggerMode(0);
-        m_thread->pause();
+        if(param.IntParamValue)
+            setTriggerMode(0);
+        else
+            setTriggerMode(1);
         break;
     }
     }
@@ -240,11 +270,6 @@ void JCOptixCameraAdapter::execute(const JCCameraActionParam& param)
 
 void JCOptixCameraAdapter::Image_process(QImage& img)
 {
-    if(_isSavedImage)
-    {
-        // save image
-    }
-
     emit newImage(img);
 }
 

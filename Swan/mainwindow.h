@@ -49,10 +49,13 @@ protected:
 
 private slots:
     void handleNewImage(const QImage &, ImageSource);
+    void handleAdapterStatus(int);
+    void handleActionFinished();
     void on_btnCheckBarrier_clicked();
     void on_btnStartStop_clicked();
     void on_btnPause_clicked();
     void on_btnHome_clicked();
+    void on_radScanByRect_toggled(bool checked);
     void on_radScanByDeg_toggled(bool checked);
     void on_radScanByPixel_toggled(bool checked);
     void on_btnTurnLeft_pressed();
@@ -66,13 +69,25 @@ private slots:
     void entered();
     void leaved();
 
-    void on_btnRangePreview_clicked();
     void on_btnSensorPreview_clicked();
 
     void on_btnPickColor_clicked();
     void on_txtBasey1_valueChanged(int arg1);
     void on_txtBasey2_valueChanged(int arg1);
     void on_txtBasex_valueChanged(int arg1);
+    void on_txtDegStart_valueChanged(int arg1);
+    void on_txtDegEnd_valueChanged(int arg1);
+    void on_txtDegStep_valueChanged(double arg1);
+    void on_txtRectStep_valueChanged(int arg1);
+    void on_txtPixStep_valueChanged(int arg1);
+    void on_txtPixEnd_valueChanged(int arg1);
+    void on_txtPixStart_valueChanged(int arg1);
+    void on_txtExpo_valueChanged(int arg1);
+    void on_btnSensorVideo_clicked();
+
+    void on_chkMirrorH_clicked(bool checked);
+
+    void on_chkMirrorV_clicked(bool checked);
 
 private:
     void setShadowArea();
@@ -81,6 +96,8 @@ private:
     void setButtonColor(QColor);
     QPoint restoreCoor(const QPoint&);
     QPoint restoreCoor(const QPointF&);
+    void enableButton(QList<QPushButton*> &);
+    void enableButton(QPushButton*);
 
 private:
     Ui::MainWindow *ui;
@@ -109,6 +126,10 @@ private:
     double scaleRateX = 1.0;
     double scaleRateY = 1.0;
 
+    int start;
+    int end;
+    double step;
+    SWanScanMode mode;
 };
 
 #endif // MAINWINDOW_H

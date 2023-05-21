@@ -37,14 +37,18 @@ enum FlowAction{
     FA_Stop,
     FA_Pause,
     FA_Resume,
-    FA_Reset
+    FA_Reset,
+    FA_GotoReady
 
 };
 
 struct FlowActionParam
 {
     FlowAction fAction;
-
+    int start;
+    int end;
+    double step;
+    SWanScanMode mode;
 };
 
 struct ActionParam{
@@ -65,8 +69,7 @@ public:
 
     void setScanRange(QRect rect){ _scanRange = rect; pixelStart = 1920 / 2 - rect.x(); pixelEnd = rect.width() + rect.x() - 1920/ 2; }
     QRect scanRange() { return _scanRange; }
-    int scanMode(){ return scanmode; }
-    void setScanMode(int m){ scanmode = m; logdebug << "set scan mode to " << m;}
+    void setScanMode(SWanScanMode m){ scanmode = m; }
 
     bool isProcessRunning() {return _isProcessRunning; }
     bool isProcessPause() {return _isProcessPause; }
@@ -82,10 +85,14 @@ signals:
     void callJCoptix(const JCCameraActionParam &);
     void callUSBCamera(const USBCameraActionParam &);
 
+    void adapterStatus(int);
+    void actionFinished();
+
 private slots:
     void recieveNewImage(const QImage &);
     void motorStateChanged(const MotorState &);
     void handleActionFinished();
+    void statusHandler(int);
 
 private:
     void takePhotoProcess();
@@ -106,24 +113,30 @@ private:
     // the lens angle is 60°, and the width is 1920 pixels
     // 1 pixel need this pulse
     const double     pixelPerPulse = 60 / 1920 / 1.8 * 256.0 * 10;
-    int        scanmode = 1;  // scanmode: 1-> scan by degree; 2->scan by pixels
+    SWanScanMode        scanmode = SM_DEG;  // scanmode: 0 scan in custom rectangle, 1 scan in degree, 2 scan in pixel
     QRect      _scanRange;  // scan range draw by user
     int        pixelStart = -30;
     int        pixelEnd = 30;
     int        pixelStep = 1.8;
 
-    int        endPosition = 0;
 
     int        stepIndex = 0;
     bool       isReset = false;
     bool       _isProcessRunning = false;
     bool       _isProcessPause = false;
     bool       _isImageSaved = false;
+    bool       _isFirstSaved = false;
     qint32     targetPosition = 0;  // used in runDistance mode, indicates the position.
+    int        endPosition = 0;
+    int        zeroPosition = 0;
+    bool       isResetZeroPosition = false;
+    MotorDirection       resetDir = MD_CounterClock;
     MotorState mstate;
 
 
     bool  isMotorActionFinished = false;
+    bool  isRaiseActionFinished = false;
+    bool  isJCStream = false;
 
 };
 
