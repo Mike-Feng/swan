@@ -117,6 +117,7 @@ void MotorAdapter::ReportStatus()
         && (!conditions.isCheckPosition || _status.position == conditions.position))
     {
         statusChecker->stop();
+        logdebug << "current position:" << _status.position *1.8 / 200.0 / 10; // because the reduction-gear ratio is 10.
         emit actionFinished();
     }
 }

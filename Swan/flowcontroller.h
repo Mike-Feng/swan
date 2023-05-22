@@ -67,10 +67,6 @@ public:
     void Quit();
     void setPreviewResolution(const QSize &);
 
-    void setScanRange(QRect rect){ _scanRange = rect; pixelStart = 1920 / 2 - rect.x(); pixelEnd = rect.width() + rect.x() - 1920/ 2; }
-    QRect scanRange() { return _scanRange; }
-    void setScanMode(SWanScanMode m){ scanmode = m; }
-
     bool isProcessRunning() {return _isProcessRunning; }
     bool isProcessPause() {return _isProcessPause; }
 
@@ -86,7 +82,7 @@ signals:
     void callUSBCamera(const USBCameraActionParam &);
 
     void adapterStatus(int);
-    void actionFinished();
+    void actionFinished(double);
 
 private slots:
     void recieveNewImage(const QImage &);
@@ -109,15 +105,16 @@ private:
     double     angleEnd = 30;
     double     angleStep = 1.8;
      // 1 degree need 256 / 1.8 pulse, the rate of reduction gears is 10.
-    const double     anglePerPulse = 256 / 1.8 * 10;
+    double     anglePerPulse = 256 / 1.8 * 10;
     // the lens angle is 60°, and the width is 1920 pixels
     // 1 pixel need this pulse
-    const double     pixelPerPulse = 60 / 1920 / 1.8 * 256.0 * 10;
+    double     pixelPerPulse = SWAN_VIEWRANGE * 1.0 / SWAN_IMAGESIZE.width() / 1.8 * 256.0 * 10;
     SWanScanMode        scanmode = SM_DEG;  // scanmode: 0 scan in custom rectangle, 1 scan in degree, 2 scan in pixel
-    QRect      _scanRange;  // scan range draw by user
-    int        pixelStart = -30;
+
+    int        pixelStart = -30; // scan range draw by user
     int        pixelEnd = 30;
-    int        pixelStep = 1.8;
+    int        pixelStep = 20;
+    int        middlePixel = SWAN_IMAGESIZE.width() / 2;
 
 
     int        stepIndex = 0;
@@ -128,9 +125,6 @@ private:
     bool       _isFirstSaved = false;
     qint32     targetPosition = 0;  // used in runDistance mode, indicates the position.
     int        endPosition = 0;
-    int        zeroPosition = 0;
-    bool       isResetZeroPosition = false;
-    MotorDirection       resetDir = MD_CounterClock;
     MotorState mstate;
 
 

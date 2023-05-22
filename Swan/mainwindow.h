@@ -50,7 +50,7 @@ protected:
 private slots:
     void handleNewImage(const QImage &, ImageSource);
     void handleAdapterStatus(int);
-    void handleActionFinished();
+    void handleActionFinished(double);
     void on_btnCheckBarrier_clicked();
     void on_btnStartStop_clicked();
     void on_btnPause_clicked();

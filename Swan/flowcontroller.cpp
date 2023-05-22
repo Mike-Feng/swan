@@ -56,7 +56,6 @@ void FlowController::init()
     QDir udir(SWAN_PICUSBPATH);
     if(!udir.exists())
         udir.mkpath(".");
-
 }
 
 void FlowController::execute(const ActionParam & param)
@@ -72,26 +71,29 @@ void FlowController::execute(const ActionParam & param)
             param.Direction = MD_CounterClock;
             _isProcessRunning = false;
             _isProcessPause = false;
-            zeroPosition = 0;
 
             emit callMotor(param);
             break;
         }
         case FA_Run:
         {
+            scanmode = param.flowParam.mode;
             if(scanmode == SM_DEG)
             {
+                angleStart = param.flowParam.start;
+                angleEnd = param.flowParam.end;
+                angleStep = param.flowParam.step;
                 targetPosition = param.flowParam.start * anglePerPulse;
                 endPosition = param.flowParam.end * anglePerPulse;
             }
             else
             {
-                targetPosition = param.flowParam.start * pixelPerPulse;
-                endPosition = param.flowParam.end * pixelPerPulse;
+                pixelStart = param.flowParam.start;
+                pixelEnd = param.flowParam.end;
+                pixelStep = param.flowParam.step;
+                targetPosition = (pixelStart - middlePixel) * pixelPerPulse;
+                endPosition = (pixelEnd - middlePixel) * pixelPerPulse;
             }
-
-            targetPosition += zeroPosition;
-            endPosition += zeroPosition;
 
             stepIndex = 0;
             _isProcessRunning = true;
@@ -124,7 +126,7 @@ void FlowController::execute(const ActionParam & param)
             isRaiseActionFinished = true;
             MotorActionParam param;
             param.MAction = MA_RunOnDistance;
-            param.data32 = zeroPosition;
+            param.data32 = 0;
             _isProcessRunning = false;
             _isProcessPause = false;
             emit callMotor(param);
@@ -138,15 +140,7 @@ void FlowController::execute(const ActionParam & param)
     case MotorTarget:
     {
         isRaiseActionFinished = true;
-        if(param.motorParam.MAction == MA_MoveZero)
-        {
-            isResetZeroPosition = true;
-        }
 
-        if(param.motorParam.MAction == MA_StopRun)
-        {
-
-        }
         emit callMotor(param.motorParam);
         break;
     }
@@ -181,13 +175,13 @@ void FlowController::recieveNewImage(const QImage &preview)
         {
             switch (scanmode) {
             case SM_RECT:
-                filename += QString("RECT_%1_%2_").arg(_scanRange.x()).arg(_scanRange.x() + _scanRange.width());
+                filename += QString("RECT_%1_%2_").arg(pixelStart).arg(pixelEnd);
                 break;
             case SM_DEG:
                 filename += QString("Angle_%1_%2_").arg(angleStart).arg(angleEnd);
                 break;
             case SM_PIX:
-                filename +=  QString("Pixel_%1_%2_").arg(_scanRange.x()).arg(_scanRange.x() + _scanRange.width());
+                filename +=  QString("Pixel_%1_%2_").arg(pixelStart).arg(pixelEnd);
                 break;
             }
 
@@ -242,12 +236,6 @@ void FlowController::motorStateChanged(const MotorState & status)
     mstate = status;
     if(!status.isConnected)
         emit adapterStatus(3);
-
-    if(isResetZeroPosition && status.isStopped)
-    {
-        zeroPosition = status.position;
-        isResetZeroPosition = false;
-    }
 }
 
 void FlowController::statusHandler(int status)
@@ -267,14 +255,14 @@ void FlowController::handleActionFinished()
     if(isRaiseActionFinished)
     {
         isRaiseActionFinished = false;
-        emit actionFinished();
+        emit actionFinished(targetPosition / pixelPerPulse + SWAN_IMAGESIZE.width() / 2);
     }
 }
 
 void FlowController::takePhotoProcess()
 {
     QtConcurrent::run([=]() {
-        logdebug << "begin take photo process.";
+        logdebug << "begin take photo process, from " << targetPosition << " to " << endPosition;
 
         while(_isProcessRunning)
         {
@@ -284,9 +272,11 @@ void FlowController::takePhotoProcess()
                 continue;
             }
 
+            logdebug << "Round " << stepIndex << ": " << targetPosition;
             stepIndex ++;
 
             isMotorActionFinished = false;
+            isRaiseActionFinished = true;
             // goto start position
             MotorActionParam param;
             param.MAction = MA_RunOnDistance;
@@ -306,7 +296,7 @@ void FlowController::takePhotoProcess()
             while(!_isImageSaved)
                 sleep(50);
 
-            if(targetPosition > endPosition)
+            if(targetPosition >= endPosition)
             {
                 loginfo << "scan finished, image count:" << stepIndex ;
                 break;
@@ -322,7 +312,9 @@ void FlowController::takePhotoProcess()
             }
         }
 
-        emit actionFinished();
+        _isProcessRunning = false;
+        _isProcessPause = false;
+        emit actionFinished(0);
         logdebug << "stop take photo process.";
     });
 

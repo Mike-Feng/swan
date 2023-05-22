@@ -155,17 +155,14 @@ void MainWindow::initUI()
     switch (sm) {
     case SM_RECT:
         ui->radScanByRect->setChecked(true);
-        controller->setScanMode(SM_RECT);
         logdebug << "scan mode: SM_RECT";
         break;
     case SM_DEG:
         ui->radScanByDeg->setChecked(true);
-        controller->setScanMode(SM_DEG);
         logdebug << "scan mode: SM_DEG";
         break;
     case SM_PIX:
         ui->radScanByPixel->setChecked(true);
-        controller->setScanMode(SM_PIX);
         logdebug << "scan mode: SM_PIX";
         break;
     }
@@ -203,17 +200,12 @@ QPoint MainWindow::restoreCoor(const QPointF& qpf)
 
 void MainWindow::enableButton(QList<QPushButton *> & buttons)
 {
-    ui->btnStartStop->setEnabled(false);
-    ui->btnPause->setEnabled(false);
-    ui->btnTurnLeft->setEnabled(false);
-    ui->btnTurnRight->setEnabled(false);
-    ui->btnHome->setEnabled(false);
-    ui->btnCheckBarrier->setEnabled(false);
-
-    foreach(QPushButton * b, buttons)
-    {
-        b->setEnabled(true);
-    }
+    ui->btnStartStop->setEnabled(buttons.contains(ui->btnStartStop));
+    ui->btnPause->setEnabled(buttons.contains(ui->btnPause));
+    ui->btnTurnLeft->setEnabled(buttons.contains(ui->btnTurnLeft));
+    ui->btnTurnRight->setEnabled(buttons.contains(ui->btnTurnRight));
+    ui->btnHome->setEnabled(buttons.contains(ui->btnHome));
+    ui->btnCheckBarrier->setEnabled(buttons.contains(ui->btnCheckBarrier));
 }
 void MainWindow::enableButton(QPushButton * btn)
 {
@@ -281,16 +273,30 @@ void MainWindow::handleAdapterStatus(int v)
     ui->gboxOp->setEnabled(false);
 }
 
-void MainWindow::handleActionFinished()
+void MainWindow::handleActionFinished(double x)
 {
     logdebug << "action finished.";
-    QList<QPushButton*> btns;
-    btns.append(ui->btnStartStop);
-    btns.append(ui->btnTurnLeft);
-    btns.append(ui->btnTurnRight);
-    btns.append(ui->btnHome);
-    btns.append(ui->btnCheckBarrier);
-    enableButton(btns);
+    if(controller->isProcessRunning())
+    {
+        if(mode == SM_RECT)
+        {
+            //QRectF r = _rect->rect();
+            //r.setRect(x / scaleRateX * 2 - SWAN_IMAGESIZE.width() / 2, r.y(), r.width(), r.height());
+            //_rect->setRect(r);
+            //setShadowArea();
+        }
+    }
+    else
+    {
+        ui->btnStartStop->setText(("开始"));
+        ui->btnPause->setText(("暂停"));
+        ui->btnStartStop->setEnabled(true);
+        ui->btnPause->setEnabled(false);
+        ui->btnTurnLeft->setEnabled(true);
+        ui->btnTurnRight->setEnabled(true);
+        ui->btnHome->setEnabled(true);
+        ui->btnCheckBarrier->setEnabled(true);
+    }
 }
 
 void MainWindow::on_btnCheckBarrier_clicked()
