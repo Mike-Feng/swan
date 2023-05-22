@@ -26,9 +26,9 @@ int main(int argc, char *argv[])
 
 
     Log4Qt::PropertyConfigurator::configure("log.ini");
-#ifdef QT_NO_DEBUG
+//#ifdef QT_NO_DEBUG
     Log4Qt::LogManager::setHandleQtMessages(true);
-#endif
+//#endif
 
     Log4Qt::Logger *logger = Log4Qt::Logger::rootLogger();
     Log4Qt::PatternLayout *layout = new Log4Qt::PatternLayout();

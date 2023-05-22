@@ -391,6 +391,7 @@ void MainWindow::on_btnPause_clicked()
 
 void MainWindow::on_btnHome_clicked()
 {
+    logdebug << "button home is clicked.";
     ui->btnStartStop->setText(("开始"));
     ui->btnPause->setText(("暂停"));
 
@@ -427,6 +428,7 @@ void MainWindow::on_radScanByDeg_toggled(bool checked)
 
 void MainWindow::on_radScanByPixel_toggled(bool checked)
 {
+    logdebug << "scan by pixel: " << checked;
     //scanmode: 1-> scan by degree; 2->scan by pixels
     if(checked)
         mode = SM_PIX;
@@ -434,6 +436,7 @@ void MainWindow::on_radScanByPixel_toggled(bool checked)
 
 void MainWindow::on_btnTurnLeft_pressed()
 {
+    logdebug << QDateTime::currentDateTime() << "turn left begin. ";
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_MoveZero;
@@ -444,6 +447,7 @@ void MainWindow::on_btnTurnLeft_pressed()
 
 void MainWindow::on_btnTurnLeft_released()
 {
+    logdebug << QDateTime::currentDateTime() << "turn left end. ";
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
@@ -454,6 +458,7 @@ void MainWindow::on_btnTurnLeft_released()
 
 void MainWindow::on_btnTurnRight_pressed()
 {
+    logdebug << "turn right begin. ";
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_MoveZero;
@@ -464,6 +469,7 @@ void MainWindow::on_btnTurnRight_pressed()
 
 void MainWindow::on_btnTurnRight_released()
 {
+    logdebug << "turn right end. ";
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
@@ -589,6 +595,7 @@ void MainWindow::updateStatusLabel()
 
 void MainWindow::on_btnSensorPreview_clicked()
 {
+    logdebug << "jc preview clicked. ";
     ActionParam param;
     param.target = SensorTarget;
     param.jcParam.Action = JC_TakeSnap;
@@ -598,6 +605,7 @@ void MainWindow::on_btnSensorPreview_clicked()
 
 void MainWindow::on_btnSensorVideo_clicked()
 {
+    logdebug << "jc video clicked. ";
     ActionParam param;
     param.target = SensorTarget;
     param.jcParam.Action = JC_Preview;
@@ -741,4 +749,14 @@ void MainWindow::on_chkMirrorV_clicked(bool checked)
     param.jcParam.IntParamValue = mirror;
 
     emit doAction(param);
+}
+
+void MainWindow::on_btnHome_pressed()
+{
+    logdebug << "on_btnHome_pressed";
+}
+
+void MainWindow::on_btnHome_released()
+{
+    logdebug << "on_btnHome_released";
 }

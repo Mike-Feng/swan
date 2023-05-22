@@ -89,6 +89,10 @@ private slots:
 
     void on_chkMirrorV_clicked(bool checked);
 
+    void on_btnHome_pressed();
+
+    void on_btnHome_released();
+
 private:
     void setShadowArea();
     void updateStatusLabel();

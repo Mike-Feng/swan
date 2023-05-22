@@ -200,6 +200,12 @@ void MotorAdapter::execute(const MotorActionParam & param)
         break;
     }
     case MotorAction::MA_MoveZero:
+    {
+        qint16 data = 0;
+        if(param.Direction == MD_Clock)data |= (1 << 4);
+        write(0x2a, data);
+        break;
+    }
     case MotorAction::MA_FindBarrier:
     {
         qint16 data = 0;
@@ -231,6 +237,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
     case MotorAction::MA_StopRun:
     {
         quint16 p = 0; // 0 indicates stop condition is flag level is high
+        p |= (1 << 12);
         if(param.Direction == MD_Clock)
         {
             p |= (1 << 1); // enable right flag

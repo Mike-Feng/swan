@@ -141,7 +141,6 @@ void FlowController::execute(const ActionParam & param)
         if(param.motorParam.MAction == MA_MoveZero)
         {
             isResetZeroPosition = true;
-            resetDir = param.motorParam.Direction;
         }
 
         if(param.motorParam.MAction == MA_StopRun)
