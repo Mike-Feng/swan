@@ -37,8 +37,7 @@ public:
 #define SWAN_PICUSBPATH (SwanINI.picUSBPath())
     QString picJCPath(); void setPicJCPath(QString);
 #define SWAN_PICJCPATH (SwanINI.picJCPath())
-    QRect scanRect(); void setScanRect(QRect);
-#define SWAN_SCANRECT (SwanINI.scanRect())
+
     int rectStep(); void setRectStep(int);
 #define SWAN_RECTSTEP (SwanINI.rectStep())
     int startPixel(); void setStartPixel(int);

@@ -28,6 +28,8 @@ signals:
     void mouseMovePoint(QPoint point);
     void mousePress(QPoint point);
     void mouseRelease(QPoint point);
+    void mouseRightPress(QPoint point);
+    void mouseRightRelease(QPoint point);
     void enter();
     void leave();
 

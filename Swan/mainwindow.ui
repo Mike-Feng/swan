@@ -122,10 +122,10 @@
          <item row="1" column="1">
           <widget class="QSpinBox" name="txtDegStart">
            <property name="minimum">
-            <number>-30</number>
+            <number>-90</number>
            </property>
            <property name="maximum">
-            <number>30</number>
+            <number>90</number>
            </property>
           </widget>
          </item>
@@ -142,10 +142,10 @@
          <item row="1" column="2">
           <widget class="QSpinBox" name="txtDegEnd">
            <property name="minimum">
-            <number>-30</number>
+            <number>-90</number>
            </property>
            <property name="maximum">
-            <number>30</number>
+            <number>90</number>
            </property>
           </widget>
          </item>

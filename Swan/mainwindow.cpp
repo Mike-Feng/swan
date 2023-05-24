@@ -41,10 +41,17 @@ MainWindow::MainWindow(QWidget *parent)
                      this, SLOT(mousePressed(QPoint)));
     QObject::connect(_gvCamera,SIGNAL(mouseRelease(QPoint)),
                      this, SLOT(mouseReleased(QPoint)));
+
+    QObject::connect(_gvCamera,SIGNAL(mouseRightPress(QPoint)),
+                     this, SLOT(mouseRightPressed(QPoint)));
+    QObject::connect(_gvCamera,SIGNAL(mouseRightRelease(QPoint)),
+                     this, SLOT(mouseRightReleased(QPoint)));
+
     QObject::connect(_gvCamera,SIGNAL(enter()),
                      this, SLOT(entered()));
     QObject::connect(_gvCamera,SIGNAL(leave()),
                      this, SLOT(leaved()));
+
     QObject::connect(_gvSensor,SIGNAL(mouseMovePoint(QPoint)),
                      this, SLOT(mouseMoved(QPoint)));
     QObject::connect(_gvSensor,SIGNAL(mousePress(QPoint)),
@@ -58,7 +65,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QPen pen;
     pen.setColor(SWAN_MOUSECOLOR);
-    pen.setWidth(3);
+    pen.setWidth(1);
     pen.setStyle(Qt::DashLine);
 
     _xlineCamera = _sceneCamera->addLine(0,0,0,0, pen);
@@ -68,7 +75,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QPen penbase;
     penbase.setColor(SWAN_LINECOLOR);
-    penbase.setWidth(2);
+    penbase.setWidth(1);
 
     _ybase1 = _sceneCamera->addLine(0,0,0,0, penbase);
     _ybase2 = _sceneCamera->addLine(0,0,0,0, penbase);
@@ -88,13 +95,6 @@ MainWindow::MainWindow(QWidget *parent)
     _shadowArea->setZValue(9);
     _shadowArea->setPen(QColor(0,0,0,0));
     _shadowArea->setVisible(false);
-
-    QPen rpen;
-    rpen.setColor(SWAN_RECTCOLOR);
-    rpen.setWidth(1);
-    _rect = _sceneCamera->addRect(0,0,0,0,rpen);
-    _rect->setZValue(10);
-    _rect->setBrush(QColor(255,255,255,0));
 
     tcontroller = new QThread();
     controller->moveToThread(tcontroller);
@@ -151,8 +151,8 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::initUI()
 {
-    SWanScanMode sm = SWAN_SCANMODE;
-    switch (sm) {
+    mode = SWAN_SCANMODE;
+    switch (mode) {
     case SM_RECT:
         ui->radScanByRect->setChecked(true);
         logdebug << "scan mode: SM_RECT";
@@ -167,8 +167,6 @@ void MainWindow::initUI()
         break;
     }
 
-    ui->txtRectStart->setValue(SWAN_SCANRECT.x());
-    ui->txtRectEnd->setValue(SWAN_SCANRECT.y());
     ui->txtRectStep->setValue(SWAN_RECTSTEP);
     ui->txtDegStart->setValue(SWAN_STARTANGLE);
     ui->txtDegEnd->setValue(SWAN_ENDANGLE);
@@ -275,15 +273,18 @@ void MainWindow::handleAdapterStatus(int v)
 
 void MainWindow::handleActionFinished(double x)
 {
-    logdebug << "action finished.";
+    logdebug << "action finished, position:" << x;
     if(controller->isProcessRunning())
     {
         if(mode == SM_RECT)
         {
-            //QRectF r = _rect->rect();
-            //r.setRect(x / scaleRateX * 2 - SWAN_IMAGESIZE.width() / 2, r.y(), r.width(), r.height());
-            //_rect->setRect(r);
-            //setShadowArea();
+            foreach(QGraphicsRectItem* ri, _rects)
+            {
+                QRectF r = ri->rect();
+                r.setRect((SWAN_IMAGESIZE.width() / 2 + (ui->txtRectStart->value() - x)) / scaleRateX, r.y(), r.width(), r.height());
+                ri->setRect(r);
+            }
+            setShadowArea();
         }
     }
     else
@@ -409,6 +410,20 @@ void MainWindow::on_btnHome_clicked()
     param.target = FlowTarget;
     param.flowParam.fAction = FA_GotoReady;
     emit doAction(param);
+
+    if(mode == SM_RECT)
+    {
+        double offset = ui->txtRectStart->value() / scaleRateX - _rects.first()->x();
+
+        foreach(QGraphicsRectItem* ri, _rects)
+        {
+            QRectF r = ri->rect();
+            r.setRect(r.x() + offset, r.y(), r.width(), r.height());
+            ri->setRect(r);
+        }
+
+        setShadowArea();
+    }
 }
 
 void MainWindow::on_radScanByRect_toggled(bool checked)
@@ -427,6 +442,7 @@ void MainWindow::on_radScanByRect_toggled(bool checked)
 
 void MainWindow::on_radScanByDeg_toggled(bool checked)
 {
+    logdebug << "scan by degree: " << checked;
     //scanmode: 1-> scan by degree; 2->scan by pixels
     if(checked)
         mode = SM_DEG;
@@ -500,9 +516,9 @@ void MainWindow::mouseMoved(QPoint point)
         {
             QBrush b;
             b.setColor(QColor(0,255,0,255));
-            QRectF r = _rect->rect();
+            QRectF r = _rects.last()->rect();
             r.setCoords(r.x(),r.y(),x,y);
-            _rect->setRect(r);
+            _rects.last()->setRect(r);
             setShadowArea();
         }
     }
@@ -521,13 +537,22 @@ void MainWindow::mousePressed(QPoint point)
     if(sender() == _gvCamera)
     {
         if(_shadowArea->isVisible())
-        {
+        {            
+            QPen rpen;
+            rpen.setColor(SWAN_RECTCOLOR);
+            rpen.setWidth(1);
+            QGraphicsRectItem  * rect = _sceneCamera->addRect(point.x(),point.y(),0,0,rpen);
+            rect->setZValue(10);
+            rect->setBrush(QColor(255,255,255,0));
+
             isChangeRect = true;
-            _rect->setRect(point.x(),point.y(),0,0);
+            _rects.append(rect);
+
             setShadowArea();
         }
     }
 }
+
 void MainWindow::mouseReleased(QPoint point)
 {
     if(sender() == _gvCamera)
@@ -535,12 +560,56 @@ void MainWindow::mouseReleased(QPoint point)
         if(_shadowArea->isVisible())
         {
             isChangeRect = false;
-            ui->txtRectStart->setValue(scanArea.x());
-            ui->txtRectEnd->setValue(scanArea.x() + scanArea.width());
-            SwanINI.setScanRect(scanArea);
+
+            if(_rects.length() == 0)
+                return;
+
+            QRect re = _rects.last()->rect().toAlignedRect();
+            ScanRange nr;
+            nr.start = re.x();
+            nr.end = re.x() +re.width();
+            scanRanges.append(nr);
+
+            int min = 10000000;
+            int max = 0;
+            foreach(ScanRange sr, scanRanges)
+            {
+                if(sr.start < min)
+                    min = sr.start;
+                if(sr.end > max)
+                    max = sr.end;
+            }
+            if(scanRanges.length() > 0)
+            {
+                ui->txtRectStart->setValue(min);
+                ui->txtRectEnd->setValue(max);
+            }
         }
     }
 }
+
+void MainWindow::mouseRightPressed(QPoint point)
+{
+    if(sender() == _gvCamera)
+    {
+        if(_shadowArea->isVisible())
+        {
+            if(_rects.length() > 0)
+            {
+                QGraphicsRectItem* r = _rects.last();
+                _rects.removeLast();
+                delete r;
+
+                scanRanges.removeLast();
+            }
+        }
+    }
+}
+
+void MainWindow::mouseRightReleased(QPoint point)
+{
+}
+
 void MainWindow::entered()
 {
     if(sender() == _gvCamera)
@@ -556,6 +625,7 @@ void MainWindow::entered()
 }
 void MainWindow::leaved()
 {
+    this->unsetCursor();
     if(sender() == _gvCamera)
     {
         _xlineCamera->hide();
@@ -573,21 +643,29 @@ void MainWindow::leaved()
 void MainWindow::setShadowArea()
 {
     QRegion outRe(_gvCamera->rect());
-    QRect r = _rect->rect().toAlignedRect();
-    QRegion innRe(r);
+    foreach(QGraphicsRectItem* ri, _rects)
+    {
+        QRect r = ri->rect().toAlignedRect();
+        QRegion innRe(r);
+        outRe = outRe.subtracted(innRe);
+    }
     QPainterPath painterPath;
-    painterPath.addRegion(outRe.subtracted(innRe));
+    painterPath.addRegion(outRe);
     _shadowArea->setPath(painterPath);
-    scanArea = QRect(r.x() * scaleRateX, r.y() * scaleRateY,
-                     r.width() * scaleRateX, r.height() * scaleRateY);
 }
 
 void MainWindow::updateStatusLabel()
 {
     QString s;
-    if(_rect->isVisible())
-        s += QString("区域:x:%1,y:%2,w:%3,h:%4   ").arg(scanArea.x()).arg(scanArea.y()).arg(scanArea.width()).arg(scanArea.height());
-
+    if(_shadowArea->isVisible())
+    {
+        s += QString("区域:");
+        foreach(QGraphicsRectItem* ri, _rects)
+        {
+            QRect r = ri->rect().toAlignedRect();
+            s += QString(" %1 ~ %2").arg(r.x()).arg(r.x() + r.width());
+        }
+    }
     if(_xlineCamera->isVisible())
         s += QString("坐标x:%1,y:%2").arg(mPos.x()).arg(mPos.y());
 
@@ -654,22 +732,26 @@ void MainWindow::setButtonColor(QColor c)
 
 void MainWindow::on_txtBasey1_valueChanged(int y)
 {
-    y = y > _sceneCamera->height() ? _sceneCamera->height() : y;
-    SwanINI.setYline1(y * scaleRateY);
+    y = y > SWAN_IMAGESIZE.height() ? SWAN_IMAGESIZE.height() : y;
+    SwanINI.setYline1(y);
+    y = y / scaleRateY;
     _ybase1->setLine(0,y,_sceneCamera->width(),y);
 }
 
 void MainWindow::on_txtBasey2_valueChanged(int y)
 {
-    y = y > _sceneCamera->height() ? _sceneCamera->height() : y;
-    SwanINI.setYline2(y * scaleRateY);
+    y = y > SWAN_IMAGESIZE.height() ? SWAN_IMAGESIZE.height() : y;
+    SwanINI.setYline2(y);
+    y = y / scaleRateY;
     _ybase2->setLine(0,y,_sceneCamera->width(),y);
 }
 
 void MainWindow::on_txtBasex_valueChanged(int x)
 {
-    x = x > _sceneCamera->width() ? _sceneCamera->width() : x;
-    SwanINI.setXCenter(x * scaleRateX);
+    x = x > SWAN_IMAGESIZE.width() ? SWAN_IMAGESIZE.width() : x;
+    SwanINI.setXCenter(x);
+
+    x = x / scaleRateX;
     _xbase->setLine(x,0,x,_sceneCamera->height());
 }
 
@@ -755,14 +837,4 @@ void MainWindow::on_chkMirrorV_clicked(bool checked)
     param.jcParam.IntParamValue = mirror;
 
     emit doAction(param);
-}
-
-void MainWindow::on_btnHome_pressed()
-{
-    logdebug << "on_btnHome_pressed";
-}
-
-void MainWindow::on_btnHome_released()
-{
-    logdebug << "on_btnHome_released";
 }

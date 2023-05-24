@@ -28,33 +28,6 @@ void SwanSetting::setPicUSBPath(QString v){ _settings->setValue("picUSBPath", v)
 QString SwanSetting::picJCPath(){ return _settings->value("picJCPath").toString();}
 void SwanSetting::setPicJCPath(QString v){ _settings->setValue("picJCPath", v);}
 
-QRect SwanSetting::scanRect()
-{
-    QStringList rectlist = _settings->value("scanRect").toString().split(",", Qt::SkipEmptyParts);
-    QRect r(0, 0, 1920, 1080);
-    if(rectlist.length() == 4)
-    {
-        int x = rectlist[0].toInt();
-        int y = rectlist[1].toInt();
-        int w = rectlist[2].toInt();
-        int h = rectlist[3].toInt();
-
-        r = QRect(x, y, w, h);
-    }
-
-    return r;
-}
-void SwanSetting::setScanRect(QRect v)
-{
-    QStringList rectlist;
-    rectlist.append(QString::number(v.x()));
-    rectlist.append(QString::number(v.y()));
-    rectlist.append(QString::number(v.width()));
-    rectlist.append(QString::number(v.height()));
-
-    _settings->setValue("scanRect", rectlist.join(","));
-}
-
 int SwanSetting::rectStep(){ return _settings->value("rectStep", 60).toInt(); }
 void SwanSetting::setRectStep(int v){ _settings->setValue("rectStep", v); }
 

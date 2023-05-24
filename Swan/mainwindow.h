@@ -27,9 +27,10 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-struct CameraStatus
+struct ScanRange
 {
-    QRect scanRect;
+    int start;
+    int end;
 };
 
 class MainWindow : public QMainWindow {
@@ -66,6 +67,8 @@ private slots:
     void mouseMoved(QPoint point);
     void mousePressed(QPoint point);
     void mouseReleased(QPoint point);
+    void mouseRightPressed(QPoint point);
+    void mouseRightReleased(QPoint point);
     void entered();
     void leaved();
 
@@ -84,14 +87,8 @@ private slots:
     void on_txtPixStart_valueChanged(int arg1);
     void on_txtExpo_valueChanged(int arg1);
     void on_btnSensorVideo_clicked();
-
     void on_chkMirrorH_clicked(bool checked);
-
     void on_chkMirrorV_clicked(bool checked);
-
-    void on_btnHome_pressed();
-
-    void on_btnHome_released();
 
 private:
     void setShadowArea();
@@ -120,10 +117,9 @@ private:
     QGraphicsLineItem  *_xbase = nullptr;
     QGraphicsLineItem  *_xlineSensor = nullptr;
     QGraphicsLineItem  *_ylineSensor = nullptr;
-    QGraphicsRectItem  *_rect = nullptr;  // indicates the scanning area
+    QList<QGraphicsRectItem*> _rects;
     QGraphicsPathItem  *_shadowArea = nullptr; // provides the shadow effect
     bool isChangeRect = false;
-    QRect  scanArea;  // scan range draw by user
     QPoint mPos;
     QColor baseColor;
 
@@ -134,6 +130,7 @@ private:
     int end;
     double step;
     SWanScanMode mode;
+    QList<ScanRange>  scanRanges;
 };
 
 #endif // MAINWINDOW_H

@@ -15,7 +15,7 @@ using namespace Cg::Swan::Controls;
 SwanGraphicsView::SwanGraphicsView(QWidget *parent):QGraphicsView(parent)
 {
     setMouseTracking(true);
-    setCursor(Qt::CrossCursor);
+    this->setCursor(QCursor(QPixmap(":/c/dot.png")));
     this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
@@ -30,20 +30,28 @@ void SwanGraphicsView::mouseMoveEvent(QMouseEvent *event)
 void SwanGraphicsView::mousePressEvent(QMouseEvent *event)
 {
     QGraphicsView::mousePressEvent(event);
+    QPoint point=event->pos();
     if (event->button()==Qt::LeftButton)
     {
-        QPoint point=event->pos();
         emit mousePress(point);
+    }
+    else
+    {
+        emit mouseRightPress(point);
     }
 }
 
 void SwanGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
     QGraphicsView::mouseReleaseEvent(event);
+    QPoint point=event->pos();
     if (event->button()==Qt::LeftButton)
     {
-        QPoint point=event->pos();
         emit mouseRelease(point);
+    }
+    else
+    {
+        emit mouseRightRelease(point);
     }
 
 }
