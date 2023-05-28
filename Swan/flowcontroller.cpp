@@ -310,7 +310,7 @@ void FlowController::takePhotoProcess()
         {
             if(_isProcessPause)
             {
-                sleep(1000);
+                sleep(100);
                 continue;
             }
 
@@ -335,7 +335,7 @@ void FlowController::takePhotoProcess()
             jcparam.Action = JC_TriggerOnce;
             emit callJCoptix(jcparam);
 
-            while(!_isImageSaved)
+            while(!_isImageSaved && _isProcessRunning)
                 sleep(50);
 
             if(targetPosition >= endPosition)

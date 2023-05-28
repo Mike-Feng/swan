@@ -116,7 +116,7 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
-    qDebug() << "quit application";    
+    logdebug << "quit application";
     disconnect(controller, &FlowController::newImage, this, &MainWindow::handleNewImage);
     sleep(50);
     controller->Quit();
@@ -391,17 +391,18 @@ void MainWindow::on_btnPause_clicked()
     param.target = FlowTarget;
     QString text;
 
-    if(!controller->isProcessPause())
+    if(controller->isProcessPause())
     {
-        text = ("继续");
+        logdebug << "resume process" ;
+        text = ("暂停");
         param.flowParam.fAction = FA_Resume;
     }
     else
     {
-        text = ("暂停");
+        logdebug << "pause process" ;
+        text = ("继续");
         param.flowParam.fAction = FA_Pause;
     }
-
     ui->btnPause->setText(text);
     emit doAction(param);
 }
