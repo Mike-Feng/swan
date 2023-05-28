@@ -94,6 +94,12 @@ MainWindow::MainWindow(QWidget *parent)
     _shadowArea->setPen(QColor(0,0,0,0));
     _shadowArea->setVisible(false);
 
+    txtMsg = _sceneCamera->addText("");
+    txtMsg->setDefaultTextColor(QColor(0x72,0x1c,0x24));
+    txtMsg->setPos(0,0);
+    txtMsg->setVisible(false);
+    txtMsg->setZValue(10);
+
     tcontroller = new QThread();
     controller->moveToThread(tcontroller);
     connect(tcontroller, &QThread::started, controller, &FlowController::init);
@@ -295,7 +301,6 @@ void MainWindow::handleActionFinished(double x)
     {
         ui->btnStartStop->setText(("开始"));
         ui->btnPause->setText(("暂停"));
-        isCheckBarrier = false;
         ui->btnStartStop->setEnabled(true);
         ui->btnPause->setEnabled(false);
         ui->btnTurnLeft->setEnabled(true);
@@ -325,6 +330,7 @@ void MainWindow::on_btnCheckBarrier_released()
 
 void MainWindow::on_btnStartStop_clicked()
 {
+    isReset = false;
     ActionParam param;
     param.target = FlowTarget;
     QString text;
@@ -409,6 +415,7 @@ void MainWindow::on_btnPause_clicked()
 
 void MainWindow::on_btnHome_clicked()
 {
+    isReset = true;
     logdebug << "button home is clicked.";
     ui->btnStartStop->setText(("开始"));
     ui->btnPause->setText(("暂停"));
@@ -429,14 +436,17 @@ void MainWindow::on_btnHome_clicked()
 
         double offset = ui->txtRectStart->value() / scaleRateX - _rects.first()->x();
 
-        foreach(QGraphicsRectItem* ri, _rects)
+
+        while(_rects.length() > 0)
         {
-            QRectF r = ri->rect();
-            r.setRect(r.x() + offset, r.y(), r.width(), r.height());
-            ri->setRect(r);
+            QGraphicsRectItem* r = _rects.last();
+            _rects.removeLast();
+            delete r;
         }
+        scanRanges.clear();
 
         setShadowArea();
+        updateStatusLabel();
     }
 }
 
@@ -487,6 +497,7 @@ void MainWindow::on_btnTurnLeft_released()
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
+    param.motorParam.setZeroPoint = true;
     param.motorParam.Direction = MD_CounterClock;
 
     emit doAction(param);
@@ -509,6 +520,7 @@ void MainWindow::on_btnTurnRight_released()
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_StopRun;
+    param.motorParam.setZeroPoint = true;
     param.motorParam.Direction = MD_Clock;
 
     emit doAction(param);
@@ -535,6 +547,10 @@ void MainWindow::mouseMoved(QPoint point)
             _rects.last()->setRect(r);
             setShadowArea();
         }
+        else
+        {
+            txtMsg->setPos(x, y);
+        }
     }
     else
     {
@@ -551,18 +567,29 @@ void MainWindow::mousePressed(QPoint point)
     if(sender() == _gvCamera)
     {
         if(_shadowArea->isVisible())
-        {            
-            QPen rpen;
-            rpen.setColor(SWAN_RECTCOLOR);
-            rpen.setWidth(1);
-            QGraphicsRectItem  * rect = _sceneCamera->addRect(point.x(),point.y(),0,0,rpen);
-            rect->setZValue(10);
-            rect->setBrush(QColor(255,255,255,0));
+        {
+            if(isReset)
+            {
+                QPen rpen;
+                rpen.setColor(SWAN_RECTCOLOR);
+                rpen.setWidth(1);
+                QGraphicsRectItem  * rect = _sceneCamera->addRect(point.x(),point.y(),0,0,rpen);
+                rect->setZValue(10);
+                rect->setBrush(QColor(255,255,255,0));
 
-            isChangeRect = true;
-            _rects.append(rect);
+                isChangeRect = true;
+                _rects.append(rect);
 
-            setShadowArea();
+                setShadowArea();
+            }
+            else
+            {
+                txtMsg->setPlainText("请复位后再画框。");
+                txtMsg->setPos(point);
+                txtMsg->setVisible(true);
+                //ui->statusbar->setStyleSheet("color: #721c24");
+                //ui->statusbar->showMessage(, 3000);
+            }
         }
     }
 }
@@ -573,6 +600,14 @@ void MainWindow::mouseReleased(QPoint point)
     {
         if(_shadowArea->isVisible())
         {
+            // when message is showing, there is no rect
+            if(txtMsg->isVisible())
+            {
+                txtMsg->setPlainText("");
+                txtMsg->setVisible(false);
+                return;
+            }
+
             isChangeRect = false;
 
             if(_rects.length() == 0)

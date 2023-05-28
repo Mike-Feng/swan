@@ -125,7 +125,7 @@ private slots:
 private:
     bool initMotorDriver();
     void setSpeed(qint32);
-    void stopRun(MotorDirection);
+    void stopRun(bool isSet0 = false,  MotorDirection dir = MD_Clock);
     bool write(qint8 addr, quint16 data, qint8 slaveid = 01);
     bool write(qint8 addr, QVector<quint16> data);
     Q_REQUIRED_RESULT QByteArray read(qint8 addr, int len);

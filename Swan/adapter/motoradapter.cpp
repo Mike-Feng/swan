@@ -97,10 +97,11 @@ void MotorAdapter::setSpeed(qint32 speed)
     }
 }
 
-void MotorAdapter::stopRun(MotorDirection dir)
+void MotorAdapter::stopRun(bool isSet0,  MotorDirection dir)
 {
     quint16 p = 0; // 0 indicates stop condition is flag level is high
-    p |= (1 << 12);
+    if(isSet0)
+        p |= (1 << 12);
     if(dir == MD_Clock)
     {
         p |= (1 << 1); // enable right flag
@@ -146,7 +147,7 @@ void MotorAdapter::Quit()
     if(statusChecker->isActive())
         statusChecker->stop();
 
-    stopRun(MotorDirection::MD_Clock);
+    stopRun();
 
     emit closePort();
     logdebug << "motor quit.";
@@ -252,7 +253,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
     }
     case MotorAction::MA_StopRun:
     {
-        stopRun(param.Direction);
+        stopRun(true, param.Direction);
         conditions.isStopped = true;
         conditions.isCheckRunningStatus = true;
 

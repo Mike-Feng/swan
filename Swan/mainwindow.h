@@ -115,6 +115,7 @@ private:
     QGraphicsLineItem  *_ylineSensor = nullptr;
     QList<QGraphicsRectItem*> _rects;
     QGraphicsPathItem  *_shadowArea = nullptr; // provides the shadow effect
+    QGraphicsTextItem * txtMsg = nullptr;
     bool isChangeRect = false;
     QPoint mPos;
     QColor baseColor;
@@ -128,7 +129,7 @@ private:
     SWanScanMode mode;
     QList<ScanRange>  scanRanges;
 
-    bool isCheckBarrier = false;
+    bool isReset = true;
 };
 
 #endif // MAINWINDOW_H
