@@ -222,7 +222,7 @@
       <item>
        <widget class="QGroupBox" name="gboxline">
         <property name="title">
-         <string>辅助线设定</string>
+         <string>摄像头辅助线设定</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
          <item row="0" column="0">
@@ -322,36 +322,22 @@
         <property name="title">
          <string>云台操作</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_4">
-         <item row="2" column="1">
-          <widget class="QPushButton" name="btnHome">
-           <property name="text">
-            <string>复位</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QPushButton" name="btnTurnRight">
-           <property name="text">
-            <string>向右设定原点↷</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
+        <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,0">
+         <item row="1" column="0">
           <widget class="QPushButton" name="btnTurnLeft">
            <property name="text">
             <string>↶向左设定原点</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="2">
-          <widget class="QPushButton" name="btnCheckBarrier">
+         <item row="0" column="0">
+          <widget class="QPushButton" name="btnStartStop">
            <property name="text">
-            <string>寻找物理原点</string>
+            <string>开始扫描</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="2">
+         <item row="0" column="1">
           <widget class="QPushButton" name="btnPause">
            <property name="enabled">
             <bool>false</bool>
@@ -361,10 +347,24 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QPushButton" name="btnStartStop">
+         <item row="1" column="1">
+          <widget class="QPushButton" name="btnTurnRight">
            <property name="text">
-            <string>开始扫描</string>
+            <string>向右设定原点↷</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="btnHome">
+           <property name="text">
+            <string>复位</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="btnCheckBarrier">
+           <property name="text">
+            <string>反转回限位</string>
            </property>
           </widget>
          </item>
@@ -374,7 +374,7 @@
       <item>
        <widget class="QGroupBox" name="gboxSensor">
         <property name="title">
-         <string>相机</string>
+         <string>工业相机</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_6">
          <item row="2" column="1">

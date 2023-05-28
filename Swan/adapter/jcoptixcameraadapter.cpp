@@ -110,7 +110,7 @@ bool JCOptixCameraAdapter::initParam()
     QSize reso = SWAN_IMAGESIZE;
     bool ret = setResolution(reso.width(), reso.height());
     ret &= setTriggerMode(1);
-    ret &= setExposure(SWAN_EXPOSURE);
+    //ret &= setExposure(SWAN_EXPOSURE); //ui will set
     CameraSetMirror(g_hCamera, MIRROR_DIRECTION_HORIZONTAL, SWAN_MIRRORH);
     CameraSetMirror(g_hCamera, MIRROR_DIRECTION_VERTICAL, SWAN_MIRRORV);
     g_SaveImage_type=3;
@@ -210,15 +210,16 @@ bool JCOptixCameraAdapter::setExposure(int time)
         来获得实际设定的值。
     */
     CameraSdkStatus ret = CameraSetExposureTime(g_hCamera,time*m_fExpLineTime);
+    ret = CameraGetExposureTime(g_hCamera, &m_fExpLineTime);
 
     if(ret == CAMERA_STATUS_SUCCESS)
     {
-        logdebug <<  "set JC ExposureTime:" << (time*m_fExpLineTime)/1000 << "ms  success.";
+        logdebug <<  "set JC ExposureTime:" << (m_fExpLineTime)/1000 << "ms  success.";
         return true;
     }
     else
     {
-        logdebug <<  "set JC ExposureTime:" << (time*m_fExpLineTime)/1000 << "ms  success.";
+        logdebug <<  "set JC ExposureTime:" << (m_fExpLineTime)/1000 << "ms  failed.";
         return false;
     }
 }

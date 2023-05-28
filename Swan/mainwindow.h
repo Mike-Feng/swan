@@ -27,12 +27,6 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-struct ScanRange
-{
-    int start;
-    int end;
-};
-
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -46,13 +40,15 @@ signals:
 protected:
     void closeEvent(QCloseEvent *e);
     void showEvent(QShowEvent *event);
-    void resizeEvent(QResizeEvent *event);
+    void resizeEvent(QResizeEvent*);
 
 private slots:
     void handleNewImage(const QImage &, ImageSource);
     void handleAdapterStatus(int);
     void handleActionFinished(double);
-    void on_btnCheckBarrier_clicked();
+    void handleLivePosition(double);
+    void on_btnCheckBarrier_pressed();
+    void on_btnCheckBarrier_released();
     void on_btnStartStop_clicked();
     void on_btnPause_clicked();
     void on_btnHome_clicked();
@@ -72,8 +68,6 @@ private slots:
     void entered();
     void leaved();
 
-    void on_btnSensorPreview_clicked();
-
     void on_btnPickColor_clicked();
     void on_txtBasey1_valueChanged(int arg1);
     void on_txtBasey2_valueChanged(int arg1);
@@ -87,8 +81,10 @@ private slots:
     void on_txtPixStart_valueChanged(int arg1);
     void on_txtExpo_valueChanged(int arg1);
     void on_btnSensorVideo_clicked();
+    void on_btnSensorPreview_clicked();
     void on_chkMirrorH_clicked(bool checked);
     void on_chkMirrorV_clicked(bool checked);
+
 
 private:
     void setShadowArea();
@@ -131,6 +127,8 @@ private:
     double step;
     SWanScanMode mode;
     QList<ScanRange>  scanRanges;
+
+    bool isCheckBarrier = false;
 };
 
 #endif // MAINWINDOW_H

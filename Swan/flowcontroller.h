@@ -42,6 +42,12 @@ enum FlowAction{
 
 };
 
+struct ScanRange
+{
+    int start;
+    int end;
+};
+
 struct FlowActionParam
 {
     FlowAction fAction;
@@ -65,7 +71,7 @@ class FlowController : public QObject
 public:
     explicit FlowController(QObject *parent = nullptr);
     void Quit();
-    void setPreviewResolution(const QSize &);
+    void setScanRects(const QList<ScanRange> &);
 
     bool isProcessRunning() {return _isProcessRunning; }
     bool isProcessPause() {return _isProcessPause; }
@@ -83,11 +89,12 @@ signals:
 
     void adapterStatus(int);
     void actionFinished(double);
-
+    void livePosition(double);
 private slots:
     void recieveNewImage(const QImage &);
     void motorStateChanged(const MotorState &);
     void handleActionFinished();
+    void handleLivePosition(int);
     void statusHandler(int);
 
 private:
@@ -104,7 +111,7 @@ private:
     double     angleStart = -30;
     double     angleEnd = 30;
     double     angleStep = 1.8;
-     // 1 degree need 256 / 1.8 pulse, the rate of reduction gears is 10.
+    // 1 degree need 256 / 1.8 pulse, the rate of reduction gears is 10.
     double     anglePerPulse = 256 / 1.8 * 10;
     // the lens angle is 60°, and the width is 1920 pixels
     // 1 pixel need this pulse
@@ -115,7 +122,7 @@ private:
     int        pixelEnd = 30;
     int        pixelStep = 20;
     int        middlePixel = SWAN_IMAGESIZE.width() / 2;
-
+    QList<ScanRange> rects;
 
     int        stepIndex = 0;
     bool       isReset = false;

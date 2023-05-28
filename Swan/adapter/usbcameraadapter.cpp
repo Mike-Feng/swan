@@ -18,7 +18,6 @@ USBCameraAdapter::USBCameraAdapter(QObject *parent) : QObject(parent)
 void USBCameraAdapter::init()
 {
     QList<QCameraInfo> cameras = QCameraInfo::availableCameras();
-    logdebug << cameras.size();
 
     for(int i = 0;i<cameras.size();i++)
     {

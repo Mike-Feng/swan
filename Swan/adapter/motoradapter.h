@@ -16,6 +16,9 @@
 #include <QObject>
 #include <QEventLoop>
 #include <QTimer>
+#include <QtConcurrent>
+#include <QtEndian>
+#include "serialportworker.h"
 
 namespace Cg { namespace Swan { namespace Adapter {
 
@@ -39,7 +42,8 @@ enum MotorAction
     MA_GotoReady,
     MA_StopRun,
     MA_SetSpeed,
-    MA_ReadStatus
+    MA_ReadStatus,
+    MA_Emergency
 };
 
 enum MotorDirection
@@ -100,7 +104,6 @@ public:
     int debugSpeed(){ return  _debugSpeed;} // is for find the left/right flag and the middle point
     void setDebugSpeed(int speed){ _debugSpeed = speed; }
 
-    void connectDevice();
     void Quit();
 
     MotorState Status() { return _status;}
@@ -112,6 +115,9 @@ public slots:
 signals:
     void motorStateChanged(const MotorState &);
     void actionFinished();
+    void newSerialportData(const QByteArray &);
+    void livePosition(int);
+    void closePort();
 
 private slots:
     void ReportStatus();
@@ -119,6 +125,7 @@ private slots:
 private:
     bool initMotorDriver();
     void setSpeed(qint32);
+    void stopRun(MotorDirection);
     bool write(qint8 addr, quint16 data, qint8 slaveid = 01);
     bool write(qint8 addr, QVector<quint16> data);
     Q_REQUIRED_RESULT QByteArray read(qint8 addr, int len);
@@ -127,7 +134,9 @@ private:
     void readStatus();
 
 private:
-    QSerialPort  *client = nullptr;
+    SerialPortWorker  *client = nullptr;
+    QSerialPort * port = nullptr;
+    QThread      *tClient = nullptr;
     QTimer       *statusChecker = nullptr;
     MotorState _status;
     bool _direction = true; // true: clockwise, false: counterclockwise
@@ -140,11 +149,8 @@ private:
     int _runningSpeed = 200 * 256; // 200*256(0xC800) pulse/second, means 1 circle/second
     int _debugSpeed = 100 * 256; // 100*256(0x6400) pulse/second, means 0.5 circle/second
 
-    int _targetPosition = 0;
-
-    bool isConnected = false;
-
     MotorFinishCondition conditions;
+
 };
 
 }}}    // namespace Cg::Swan::Adapter

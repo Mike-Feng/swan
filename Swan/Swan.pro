@@ -28,6 +28,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     adapter/capturethread.cpp \
     adapter/jcoptixcameraadapter.cpp \
+    adapter/serialportworker.cpp \
     adapter/usbcameraadapter.cpp \
     comm/globalsetting.cpp \
     controls/swangraphicsview.cpp \
@@ -39,6 +40,7 @@ SOURCES += \
 HEADERS += \
     adapter/capturethread.h \
     adapter/jcoptixcameraadapter.h \
+    adapter/serialportworker.h \
     adapter/usbcameraadapter.h \
     comm/Singleton.h \
     comm/call_once.h \

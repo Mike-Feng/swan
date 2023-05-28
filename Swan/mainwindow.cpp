@@ -41,12 +41,10 @@ MainWindow::MainWindow(QWidget *parent)
                      this, SLOT(mousePressed(QPoint)));
     QObject::connect(_gvCamera,SIGNAL(mouseRelease(QPoint)),
                      this, SLOT(mouseReleased(QPoint)));
-
     QObject::connect(_gvCamera,SIGNAL(mouseRightPress(QPoint)),
                      this, SLOT(mouseRightPressed(QPoint)));
     QObject::connect(_gvCamera,SIGNAL(mouseRightRelease(QPoint)),
                      this, SLOT(mouseRightReleased(QPoint)));
-
     QObject::connect(_gvCamera,SIGNAL(enter()),
                      this, SLOT(entered()));
     QObject::connect(_gvCamera,SIGNAL(leave()),
@@ -102,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(controller, &FlowController::newImage, this, &MainWindow::handleNewImage);
     connect(controller, &FlowController::adapterStatus, this, &MainWindow::handleAdapterStatus);
     connect(controller, &FlowController::actionFinished, this, &MainWindow::handleActionFinished);
+    connect(controller, &FlowController::livePosition, this, &MainWindow::handleLivePosition);
     connect(this, &MainWindow::doAction, controller, &FlowController::execute);
 
     tcontroller->start();
@@ -128,7 +127,7 @@ void MainWindow::showEvent(QShowEvent *event)
     QApplication::processEvents();
 }
 
-void MainWindow::resizeEvent(QResizeEvent *event)
+void MainWindow::resizeEvent(QResizeEvent* event)
 {
     QMainWindow::resizeEvent(event);
     QApplication::processEvents();
@@ -270,27 +269,33 @@ void MainWindow::handleAdapterStatus(int v)
 
     ui->gboxOp->setEnabled(false);
 }
+void MainWindow::handleLivePosition(double x)
+{
+    if(mode == SM_RECT)
+    {
+        for(int i = 0; i < _rects.length(); i++)
+        {
+            ScanRange s = scanRanges[i];
+            QRectF r = _rects[i]->rect().normalized();
+            double X = (SWAN_IMAGESIZE.width() / 2 + (s.start  - x)) / scaleRateX;
+            r.setRect(X, r.y(), r.width(), r.height());
+            _rects[i]->setRect(r);
+        }
+        setShadowArea();
+    }
+}
 
 void MainWindow::handleActionFinished(double x)
 {
-    logdebug << "action finished, position:" << x;
+    logdebug << "action finished, pixel position:" << x;
     if(controller->isProcessRunning())
     {
-        if(mode == SM_RECT)
-        {
-            foreach(QGraphicsRectItem* ri, _rects)
-            {
-                QRectF r = ri->rect();
-                r.setRect((SWAN_IMAGESIZE.width() / 2 + (ui->txtRectStart->value() - x)) / scaleRateX, r.y(), r.width(), r.height());
-                ri->setRect(r);
-            }
-            setShadowArea();
-        }
     }
     else
     {
         ui->btnStartStop->setText(("开始"));
         ui->btnPause->setText(("暂停"));
+        isCheckBarrier = false;
         ui->btnStartStop->setEnabled(true);
         ui->btnPause->setEnabled(false);
         ui->btnTurnLeft->setEnabled(true);
@@ -300,17 +305,21 @@ void MainWindow::handleActionFinished(double x)
     }
 }
 
-void MainWindow::on_btnCheckBarrier_clicked()
+void MainWindow::on_btnCheckBarrier_pressed()
 {
-    logdebug << "begin Check Barrier.";
-    QList<QPushButton*> btns;
-    enableButton(btns);
-
     ActionParam param;
     param.target = MotorTarget;
     param.motorParam.MAction = MA_FindBarrier;
     param.motorParam.Direction = MD_CounterClock;
+    emit doAction(param);
+}
 
+void MainWindow::on_btnCheckBarrier_released()
+{
+    ActionParam param;
+    param.target = MotorTarget;
+    param.motorParam.MAction = MA_Emergency;
+    param.motorParam.Direction = MD_CounterClock;
     emit doAction(param);
 }
 
@@ -330,6 +339,7 @@ void MainWindow::on_btnStartStop_clicked()
             param.flowParam.start = ui->txtRectStart->value();
             param.flowParam.end = ui->txtRectEnd->value();
             param.flowParam.step = ui->txtRectStep->value();
+            controller->setScanRects(scanRanges);
             break;
         case SM_DEG:
             param.flowParam.start = ui->txtDegStart->value();
@@ -413,6 +423,9 @@ void MainWindow::on_btnHome_clicked()
 
     if(mode == SM_RECT)
     {
+        if(_rects.length() == 0)
+            return;
+
         double offset = ui->txtRectStart->value() / scaleRateX - _rects.first()->x();
 
         foreach(QGraphicsRectItem* ri, _rects)
@@ -515,9 +528,9 @@ void MainWindow::mouseMoved(QPoint point)
         if(isChangeRect)
         {
             QBrush b;
-            b.setColor(QColor(0,255,0,255));
+            b.setColor(SWAN_RECTCOLOR);
             QRectF r = _rects.last()->rect();
-            r.setCoords(r.x(),r.y(),x,y);
+            r.setCoords(r.x(), r.y(), x, y);
             _rects.last()->setRect(r);
             setShadowArea();
         }
@@ -564,26 +577,23 @@ void MainWindow::mouseReleased(QPoint point)
             if(_rects.length() == 0)
                 return;
 
-            QRect re = _rects.last()->rect().toAlignedRect();
+            QRect re = _rects.last()->rect().toAlignedRect().normalized();
             ScanRange nr;
-            nr.start = re.x();
-            nr.end = re.x() +re.width();
+            nr.start = re.x() * scaleRateX;
+            nr.end = (re.x() + re.width()) * scaleRateX;
+
             scanRanges.append(nr);
 
-            int min = 10000000;
+            int min = 100000;
             int max = 0;
             foreach(ScanRange sr, scanRanges)
             {
-                if(sr.start < min)
-                    min = sr.start;
-                if(sr.end > max)
-                    max = sr.end;
+                min = sr.start < min ? sr.start : min;
+                max = sr.end > max ? sr.end : max;
             }
-            if(scanRanges.length() > 0)
-            {
-                ui->txtRectStart->setValue(min);
-                ui->txtRectEnd->setValue(max);
-            }
+
+            ui->txtRectStart->setValue(min);
+            ui->txtRectEnd->setValue(max);
         }
     }
 }
@@ -601,6 +611,20 @@ void MainWindow::mouseRightPressed(QPoint point)
                 delete r;
 
                 scanRanges.removeLast();
+
+                if(scanRanges.length() > 0)
+                {
+                    ui->txtRectStart->setValue(scanRanges.first().start);
+                    ui->txtRectEnd->setValue(scanRanges.last().end);
+                }
+                else
+                {
+                    ui->txtRectStart->setValue(0);
+                    ui->txtRectEnd->setValue(0);
+                }
+
+                setShadowArea();
+                updateStatusLabel();
             }
         }
     }
@@ -645,13 +669,16 @@ void MainWindow::setShadowArea()
     QRegion outRe(_gvCamera->rect());
     foreach(QGraphicsRectItem* ri, _rects)
     {
-        QRect r = ri->rect().toAlignedRect();
+        QRect r = ri->rect().toAlignedRect().normalized();
         QRegion innRe(r);
         outRe = outRe.subtracted(innRe);
     }
     QPainterPath painterPath;
     painterPath.addRegion(outRe);
     _shadowArea->setPath(painterPath);
+
+    if(mode == SM_RECT && _rects.length() > 0)
+        ui->btnStartStop->setEnabled(true);
 }
 
 void MainWindow::updateStatusLabel()
@@ -660,14 +687,13 @@ void MainWindow::updateStatusLabel()
     if(_shadowArea->isVisible())
     {
         s += QString("区域:");
-        foreach(QGraphicsRectItem* ri, _rects)
+        foreach(ScanRange r, scanRanges)
         {
-            QRect r = ri->rect().toAlignedRect();
-            s += QString(" %1 ~ %2").arg(r.x()).arg(r.x() + r.width());
+            s += QString(" (%1,%2);").arg(r.start).arg(r.end);
         }
     }
     if(_xlineCamera->isVisible())
-        s += QString("坐标x:%1,y:%2").arg(mPos.x()).arg(mPos.y());
+        s += QString(" 坐标x:%1,y:%2").arg(mPos.x()).arg(mPos.y());
 
     ui->lblCameraXY->setText(s);
 
@@ -838,3 +864,4 @@ void MainWindow::on_chkMirrorV_clicked(bool checked)
 
     emit doAction(param);
 }
+

@@ -19,44 +19,25 @@ MotorAdapter::MotorAdapter(QObject *parent) : QObject(parent)
 
 void MotorAdapter::init()
 {
-    client = new QSerialPort (this);
-    client->setBaudRate(QSerialPort::Baud9600);
-    client->setDataBits(QSerialPort::Data8);
-    client->setStopBits(QSerialPort::OneStop);
-    client->setParity(QSerialPort::NoParity);
-    client->setFlowControl(QSerialPort::NoFlowControl);
-    foreach(const QSerialPortInfo &info, QSerialPortInfo::availablePorts())
-    {
-        logdebug << "portname:" << info.portName() << "description:" << info.description();
-        if(info.description() == "USB-SERIAL CH340")
-        {
-            client->setPort(info);
-            logdebug << "try serialport " << info.portName();
-            break;
-        }
-    }
+    client = new SerialPortWorker();
+    tClient = new QThread();
+    client->moveToThread(tClient);
+    connect(tClient, &QThread::started, client, &SerialPortWorker::init);
+    connect(this, &MotorAdapter::newSerialportData, client,
+            &SerialPortWorker::writeSerialport);
+    connect(this, &MotorAdapter::closePort, client,
+            &SerialPortWorker::handleClose);
 
-    connectDevice();
-
+    tClient->start(QThread::TimeCriticalPriority);
     statusChecker = new QTimer(this);
     statusChecker->setInterval(100);
     connect(statusChecker, &QTimer::timeout, this, &MotorAdapter::ReportStatus);
 
-    emit motorStateChanged(_status);
-}
+    while(!client->isConnected());
 
-void MotorAdapter::connectDevice()
-{
-    _status.isConnected = client->open(QIODevice::ReadWrite);
-    if(_status.isConnected)
-    {
-        logdebug << "connected to serialport " << client->portName();
-        _status.isConnected = initMotorDriver();
-    }
-    else
-    {
-        logdebug << "failed to connect to serialport " << client->portName();
-    }
+    initMotorDriver();
+
+    emit motorStateChanged(_status);
 }
 
 bool MotorAdapter::initMotorDriver()
@@ -66,7 +47,7 @@ bool MotorAdapter::initMotorDriver()
     if(!isOk)
     {
         qCritical() << "change 01 to 01 failed, try 00 to 01.";
-        isOk = write(0x20, 01, 00);
+        //isOk = write(0x20, 01, 00);
 
         if(!isOk)
         {
@@ -76,11 +57,13 @@ bool MotorAdapter::initMotorDriver()
         else
         {
             logdebug <<  "change 00 to 01 success.";
+            _status.isConnected = true;
         }
     }
     else
     {
         logdebug <<  "slave id is 01.";
+        _status.isConnected = true;
     }
 
     setSpeed(SWAN_SPEED);
@@ -95,17 +78,51 @@ void MotorAdapter::setSpeed(qint32 speed)
     speedv.append(((speed >> 16) & 0xffff));
     speedv.append(speed & 0xffff);
 
-    bool d = write(0x24, speedv);
-    d &= write(0x26, speedv);
-    if(d)
+    QByteArray sp24 = read(0x24, 2);
+    const char *spd = sp24.constData();
+    int num = qFromBigEndian<int>(spd);
+    if(num != speed)
     {
-        logdebug << "set motor speed to " << speed;
+        logdebug << "set motor speed24  to " << speed;
+        write(0x24, speedv);
+    }
+
+    QByteArray sp26 = read(0x24, 2);
+    const char *spd26 = sp26.constData();
+    num = qFromBigEndian<int>(spd26);
+    if(num != speed)
+    {
+        logdebug << "set motor speed26  to " << speed;
+        write(0x26, speedv);
+    }
+}
+
+void MotorAdapter::stopRun(MotorDirection dir)
+{
+    quint16 p = 0; // 0 indicates stop condition is flag level is high
+    p |= (1 << 12);
+    if(dir == MD_Clock)
+    {
+        p |= (1 << 1); // enable right flag
+        p |= (1 << 4); // clock
+
+        logdebug << "stop turn clock";
     }
     else
     {
-        logerror << "set motor speed failed.";
+        p |= (1 << 0); // enable left flag
+        logdebug << "stop turn counterclock";
     }
 
+    bool d = write(0x2a, p);
+    if(d)
+    {
+        logdebug << "write stop success.";
+    }
+    else
+    {
+        logerror << "write stop failed.";
+    }
 }
 
 void MotorAdapter::ReportStatus()
@@ -120,6 +137,8 @@ void MotorAdapter::ReportStatus()
         logdebug << "current position:" << _status.position *1.8 / 200.0 / 10; // because the reduction-gear ratio is 10.
         emit actionFinished();
     }
+
+    emit livePosition(_status.position);
 }
 
 void MotorAdapter::Quit()
@@ -127,13 +146,9 @@ void MotorAdapter::Quit()
     if(statusChecker->isActive())
         statusChecker->stop();
 
-    if(isConnected)
-    {
-        MotorActionParam p;
-        p.MAction = MotorAction::MA_StopRun;
-        execute(p);
-        client->close();
-    }
+    stopRun(MotorDirection::MD_Clock);
+
+    emit closePort();
     logdebug << "motor quit.";
 }
 
@@ -237,31 +252,7 @@ void MotorAdapter::execute(const MotorActionParam & param)
     }
     case MotorAction::MA_StopRun:
     {
-        quint16 p = 0; // 0 indicates stop condition is flag level is high
-        p |= (1 << 12);
-        if(param.Direction == MD_Clock)
-        {
-            p |= (1 << 1); // enable right flag
-            p |= (1 << 4); // clock
-
-            logdebug << "stop turn clock";
-        }
-        else
-        {
-            p |= (1 << 0); // enable left flag
-            logdebug << "stop turn counterclock";
-        }
-
-        bool d = write(0x2a, p);
-        if(d)
-        {
-            logdebug << "write stop success.";
-        }
-        else
-        {
-            logerror << "write stop failed.";
-        }
-
+        stopRun(param.Direction);
         conditions.isStopped = true;
         conditions.isCheckRunningStatus = true;
 
@@ -276,6 +267,13 @@ void MotorAdapter::execute(const MotorActionParam & param)
     {
         readStatus();
         emit motorStateChanged(_status);
+        break;
+    }
+    case MotorAction::MA_Emergency:
+    {
+        write(0x2d, 0);
+        conditions.isStopped = true;
+        conditions.isCheckRunningStatus = true;
         break;
     }
 
@@ -414,47 +412,35 @@ QByteArray MotorAdapter::read(qint8 addr, int len)
 
 QByteArray MotorAdapter::SendDataSync(const QByteArray sendData, uint expectReceiveLen)
 {
-    sleep(50);
-
-    int len = client->write(sendData);
-    qInfo()<< " send data: " << sendData.toHex() <<" send bytes: "<< len;
-
-    if(!client->waitForBytesWritten(200)){
-        qCritical()<<"send data failed:" << client->errorString();
-        client->clearError();
-        return "";
-    }
-    QEventLoop eventLoop;
-    QTimer::singleShot(200, &eventLoop, &QEventLoop::quit);
-    QObject::connect(client, SIGNAL(readyRead()), &eventLoop, SLOT(quit()));
-    eventLoop.exec();
+    sleep(20);
+    emit newSerialportData(sendData);
+    sleep(20);
     QDateTime starttime = QDateTime::currentDateTime();
-    if(client->bytesAvailable() > 0)
-    {
-        QByteArray ba;
-        while (ba.length() < expectReceiveLen)
+
+    QByteArray ba;
+
+    while (true) {
+        QDateTime endtime = QDateTime::currentDateTime();
+        int msecsTo = starttime.msecsTo(endtime);
+        if(msecsTo > 200 && ba.length() < expectReceiveLen)
         {
-            ba += client->readAll();
-            QDateTime endtime = QDateTime::currentDateTime();
-            if(endtime.msecsTo(starttime) > 200)
-            {
-                qInfo()<< "modbus timeout, no enough data. received data:" << ba.toHex();
-                ba.clear();
-                break;
-            }
+            logerror << "modbus timeout, no enough data. received data:" << ba.toHex();
+            ba.clear();
+            break;
         }
-
-        qInfo() <<" receive bytes: "<< ba.toHex();
-
-        QObject::disconnect(client, SIGNAL(readyRead()), &eventLoop, SLOT(quit()));
-        return ba;
+        if(client->_isReadyRead)
+        {
+            ba += client->readData();
+        }
+        if(ba.length() >= expectReceiveLen)
+        {
+            client->_isReadyRead = false;
+            break;
+        }
+        sleep(10);
     }
-    else
-    {
-        qInfo()<< "modbus timeout";
-        QObject::disconnect(client, SIGNAL(readyRead()), &eventLoop, SLOT(quit()));
-        return "";
-    }
+
+    return ba;
 }
 
 

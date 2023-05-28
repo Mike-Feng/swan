@@ -40,6 +40,7 @@ void FlowController::init()
     connect(optix, &JCOptixCameraAdapter::status, this, &FlowController::statusHandler);
     connect(motor, &MotorAdapter::motorStateChanged, this, &FlowController::motorStateChanged);
     connect(motor, &MotorAdapter::actionFinished, this, &FlowController::handleActionFinished);
+    connect(motor, &MotorAdapter::livePosition, this, &FlowController::handleLivePosition);
 
     connect(this, &FlowController::callUSBCamera, camera, &USBCameraAdapter::execute);
     connect(this, &FlowController::callJCoptix, optix, &JCOptixCameraAdapter::execute);
@@ -49,11 +50,11 @@ void FlowController::init()
     tcamera->start();
     tmotor->start();
 
-    QDir jdir(SWAN_PICJCPATH + QDir::separator() + "Preview" + QDir::separator());
+    QDir jdir(SWAN_PICJCPATH + QDir::separator());
     if(!jdir.exists())
         jdir.mkpath(".");
 
-    QDir udir(SWAN_PICUSBPATH);
+    QDir udir(SWAN_PICUSBPATH + "Preview" + QDir::separator());
     if(!udir.exists())
         udir.mkpath(".");
 }
@@ -226,9 +227,45 @@ void FlowController::Quit()
     motor->Quit();
 }
 
-void FlowController::setPreviewResolution(const QSize & size)
+void FlowController::setScanRects(const QList<ScanRange> & ranges)
 {
-    camera->setPreviewResolution(size);
+    rects.clear();
+
+    // put the line to the x-axis
+    QList<int> endPoints;
+    QList<bool> startFlag;
+    foreach(ScanRange r, ranges)
+    {
+        int index = 0;
+        // insert the start point
+        for(;index < endPoints.length() && r.start > endPoints[index]; index++ );
+        endPoints.insert(index, r.start);
+        startFlag.insert(index, true);
+        // insert the end point
+        for(;index < endPoints.length() && r.end >= endPoints[index]; index++ );
+        endPoints.insert(index, r.end);
+        startFlag.insert(index, false);
+    }
+
+    QStack<int> stack;
+    for(int index = 0; index < endPoints.length(); index++)
+    {
+        if(startFlag[index])
+        {
+            stack.push(endPoints[index]);
+        }
+        else
+        {
+            int pstart = stack.pop();
+            if(stack.size() == 0)
+            {
+                ScanRange sr;
+                sr.end = (endPoints[index] - middlePixel) * pixelPerPulse;
+                sr.start = (pstart - middlePixel) * pixelPerPulse;
+                rects.append(sr);
+            }
+        }
+    }
 }
 
 void FlowController::motorStateChanged(const MotorState & status)
@@ -257,6 +294,11 @@ void FlowController::handleActionFinished()
         isRaiseActionFinished = false;
         emit actionFinished(targetPosition / pixelPerPulse + SWAN_IMAGESIZE.width() / 2);
     }
+}
+
+void FlowController::handleLivePosition(int p)
+{
+    emit livePosition(p / pixelPerPulse + SWAN_IMAGESIZE.width() / 2);
 }
 
 void FlowController::takePhotoProcess()
@@ -309,6 +351,15 @@ void FlowController::takePhotoProcess()
             else
             {
                 targetPosition += pixelPerPulse * pixelStep;
+                if(scanmode == SM_RECT)
+                {
+                    if(!rects.isEmpty() && targetPosition > rects[0].end)
+                    {
+                        rects.removeFirst();
+                        if(rects.length() > 0)
+                            targetPosition = rects[0].start; // jump to the next range
+                    }
+                }
             }
         }
 

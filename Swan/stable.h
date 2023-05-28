@@ -9,6 +9,7 @@
 #ifndef STABLE_H
 #define STABLE_H
 
+#include <QtGlobal>
 #include <QImage>
 #include <QDebug>
 #include <QThread>
@@ -18,11 +19,13 @@
 
 using namespace Cg::Swan::Comm;
 
+#define sMin(a, b) (a < b) ? a : b
+#define sMax(a, b) (a > b) ? a : b
 #define sleep(x) QThread::msleep(x)
 #define HexStr(x) QString::number(x, 16)
-//#define now QDateTime::currentDateTime().toString("hh:mm:ss.zzz")
-#define logdebug  qDebug()
-#define loginfo  qInfo()
-#define logerror  qCritical()
+#define timenow QDateTime::currentDateTime().toString("hh:mm:ss.zzz")
+#define logdebug  qDebug().noquote() << timenow << "  "
+#define loginfo  qInfo().noquote() << timenow << "  "
+#define logerror  qCritical().noquote() << timenow << "  "
 
 #endif // STABLE_H
