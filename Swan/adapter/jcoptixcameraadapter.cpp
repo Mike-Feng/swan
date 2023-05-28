@@ -209,17 +209,19 @@ bool JCOptixCameraAdapter::setExposure(int time)
         本函数设定曝光时间后，建议再调用CameraGetExposureTime
         来获得实际设定的值。
     */
-    CameraSdkStatus ret = CameraSetExposureTime(g_hCamera,time*m_fExpLineTime);
-    ret = CameraGetExposureTime(g_hCamera, &m_fExpLineTime);
+
+    double extime = time*1000;
+    CameraSdkStatus ret = CameraSetExposureTime(g_hCamera, extime);
+    ret = CameraGetExposureTime(g_hCamera, &extime);
 
     if(ret == CAMERA_STATUS_SUCCESS)
     {
-        logdebug <<  "set JC ExposureTime:" << (m_fExpLineTime)/1000 << "ms  success.";
+        logdebug <<  "set JC ExposureTime:" << extime/1000 << "ms  success.";
         return true;
     }
     else
     {
-        logdebug <<  "set JC ExposureTime:" << (m_fExpLineTime)/1000 << "ms  failed.";
+        logdebug <<  "set JC ExposureTime:" << extime/1000 << "ms  failed.";
         return false;
     }
 }
