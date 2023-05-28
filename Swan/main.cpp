@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
     logger->setLevel(Log4Qt::Level::DEBUG_INT);
 
     MainWindow w;
+
+    w.setWindowTitle("Swan V1.0.0");
     w.showMaximized();
     int ret = a.exec();
 
