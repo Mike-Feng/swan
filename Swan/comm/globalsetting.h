@@ -68,6 +68,8 @@ public:
     /****** Motor group end******/
 
     /****** Camera group begin******/
+    QString cameraName();
+#define SWAN_CAMERANAME (SwanINI.cameraName())
     int viewRange(); void setViewRange(int);
 #define SWAN_VIEWRANGE (SwanINI.viewRange())
     int yline1(); void setYline1(int);

@@ -25,7 +25,7 @@ void USBCameraAdapter::init()
 
         logdebug << ci.description();
 
-        if(ci.description() == "PC Camera")
+        if(ci.description() == SWAN_CAMERANAME)
         {
             _camera = new QCamera(ci, this);
 

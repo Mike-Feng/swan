@@ -116,6 +116,8 @@ void SwanSetting::setReadyPosition(int v){ _settings->setValue("Motor/readyPosit
 
 
 /*----------- Camera -----------*/
+QString SwanSetting::cameraName(){ return _settings->value("Camera/cameraName", "PC Camera").toString();}
+
 int SwanSetting::viewRange(){ return _settings->value("Camera/viewAngle", 60).toInt();}
 void SwanSetting::setViewRange(int v){ _settings->setValue("Camera/viewAngle", v);}
 

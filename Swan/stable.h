@@ -1,4 +1,4 @@
-/**************************************************************************
+ /**************************************************************************
 **
 ** Copyright (C) 2023 Mike Feng
 ** Blog: https://www.cnblogs.com/crazyghostvon/
@@ -23,9 +23,20 @@ using namespace Cg::Swan::Comm;
 #define sMax(a, b) (a > b) ? a : b
 #define sleep(x) QThread::msleep(x)
 #define HexStr(x) QString::number(x, 16)
-#define timenow QDateTime::currentDateTime().toString("hh:mm:ss.zzz")
+#ifdef QT_NO_DEBUG
+    #define timenow ""
+#else
+    #define timenow QDateTime::currentDateTime().toString("hh:mm:ss.zzz")
+#endif
+
+#ifdef QT_NO_DEBUG
+#define logdebug  qDebug().noquote()
+#define loginfo  qInfo().noquote()
+#define logerror  qCritical().noquote()
+#else
 #define logdebug  qDebug().noquote() << timenow << "  "
 #define loginfo  qInfo().noquote() << timenow << "  "
 #define logerror  qCritical().noquote() << timenow << "  "
+#endif
 
 #endif // STABLE_H
