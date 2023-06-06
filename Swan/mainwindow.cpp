@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     controller(new FlowController())
 {
     ui->setupUi(this);
+    this->setWindowIcon(QIcon(":/c/swan.png"));
 
     // replace the graphics view with the custom view
     ui->mainLayout->replaceWidget(ui->gvCamera, _gvCamera);

@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/c">
         <file>dot.png</file>
+        <file>swan.png</file>
     </qresource>
 </RCC>

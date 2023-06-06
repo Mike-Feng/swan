@@ -56,7 +56,11 @@ FORMS += \
 
 DISTFILES += \
     log.ini \
+    logo.rc \
     swan.ini
+
+RC_FILE += logo.rc
+
 
 CONFIG(release, debug|release) {
     DEST_DIR = release
